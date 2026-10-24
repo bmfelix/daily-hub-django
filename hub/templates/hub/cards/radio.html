@@ -7,7 +7,7 @@
           <span class="meta">{{ item.station.name }} · {% if track %}{% if track.playing %}Now playing{% else %}Last played{% endif %}{% else %}Unavailable{% endif %}</span>
           {% if track %}
             <strong>{{ track.title }}</strong>
-            <span>{{ track.artist }}</span>
+            <a class="artist-link" href="{% url 'hub:artist_lookup' %}?name={{ track.artist|urlencode }}">{{ track.artist }}</a>
           {% else %}
             <span>{{ item.error|default:"No songs yet." }}</span>
           {% endif %}

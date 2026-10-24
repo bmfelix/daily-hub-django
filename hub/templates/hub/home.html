@@ -9,10 +9,10 @@
 
   <div class="cards">
     {% for card in cards %}
-      <a class="card" href="{% url 'hub:'|add:card.module.slug %}">
-        <h2>{{ card.module.title }}</h2>
+      <div class="card">
+        <h2><a class="card-link" href="{% url 'hub:'|add:card.module.slug %}">{{ card.module.title }}</a></h2>
         {% include card.template %}
-      </a>
+      </div>
     {% endfor %}
   </div>
 

@@ -375,3 +375,231 @@ class LiveRadioTests(TestCase):
             response = self.client.get(reverse("hub:home"))
         self.assertContains(response, "hub/live.js")
         self.assertContains(response, 'data-live-card="radio"')
+
+
+PEARL_JAM_ID = "83b9cbe7-9857-49e2-ab8e-b57b01038103"
+VEDDER_ID = "8b9d3d7f-3a37-4e8f-b9e8-0e3b6a4f1c2d"
+
+PEARL_JAM = {
+    "id": PEARL_JAM_ID, "name": "Pearl Jam", "type": "Group", "country": "US",
+    "area": {"name": "United States"}, "begin-area": {"name": "Seattle"},
+    "life-span": {"begin": "1990", "end": None, "ended": False},
+    "aliases": [{"name": "Mookie Blaylock"}], "isnis": ["0000000123426109"], "ipis": [],
+    "genres": [{"name": "rock", "count": 5}, {"name": "grunge", "count": 9}],
+    "tags": [{"name": "grunge", "count": 9}, {"name": "seattle", "count": 3}],
+    "rating": {"value": 4.6, "votes-count": 29},
+    "relations": [
+        {"target-type": "url", "type": "official homepage", "url": {"resource": "https://pearljam.com/"}},
+        {"target-type": "url", "type": "free streaming", "url": {"resource": "https://open.spotify.com/artist/1w5K"}},
+        {"target-type": "url", "type": "image", "url": {"resource": "https://commons.wikimedia.org/wiki/File:PJ.jpg"}},
+        {"target-type": "artist", "type": "member of band", "direction": "backward", "begin": "1990", "ended": False,
+         "attributes": ["original", "lead vocals"], "artist": {"id": VEDDER_ID, "name": "Eddie Vedder"}},
+        {"target-type": "artist", "type": "member of band", "direction": "backward", "begin": "1990-09-22",
+         "end": "1991-05-22", "ended": True, "attributes": ["drums"], "artist": {"id": "11111111-1111-1111-1111-111111111111", "name": "Dave Krusen"}},
+    ],
+}
+
+RELEASE_GROUPS = [
+    {"id": "aaaaaaaa-0000-0000-0000-000000000001", "title": "Vs.", "primary-type": "Album", "first-release-date": "1993-10-08"},
+    {"id": "aaaaaaaa-0000-0000-0000-000000000002", "title": "Ten", "primary-type": "Album", "first-release-date": "1991-08-27"},
+    {"id": "aaaaaaaa-0000-0000-0000-000000000003", "title": "Alive", "primary-type": "Single", "first-release-date": "1991"},
+    {"id": "aaaaaaaa-0000-0000-0000-000000000004", "title": "Live on Two Legs", "primary-type": "Album",
+     "secondary-types": ["Live"], "first-release-date": "1998"},
+]
+
+
+class FakeMusicBrainz:
+    """Stands in for MusicBrainzClient and counts the calls."""
+
+    def __init__(self):
+        self.calls = []
+
+    def search_artists(self, name, limit=5):
+        self.calls.append(("search", name))
+        known = {"pearl jam": PEARL_JAM_ID, "tame impala": "22222222-2222-2222-2222-222222222222"}
+        mbid = known.get(name.lower())
+        return [{"id": mbid, "name": name, "score": 100}] if mbid else [{"id": "x", "name": "Something Else", "score": 95}]
+
+    def artist(self, mbid):
+        self.calls.append(("artist", mbid))
+        if mbid == PEARL_JAM_ID:
+            return PEARL_JAM
+        return {"id": mbid, "name": "Tame Impala" if mbid.startswith("2222") else "Eddie Vedder", "relations": []}
+
+    def release_groups(self, mbid, pages=15):
+        self.calls.append(("release_groups", mbid))
+        return RELEASE_GROUPS if mbid == PEARL_JAM_ID else []
+
+
+class ArtistLibraryTests(TestCase):
+    def setUp(self):
+        from hub.musicbrainz import ArtistLibrary
+
+        self.client_mb = FakeMusicBrainz()
+        self.library = ArtistLibrary(self.client_mb)
+
+    def test_first_lookup_fetches_and_saves_everything(self):
+        from hub.models import Artist
+
+        artist = self.library.find("Pearl Jam")
+        self.assertEqual(artist.name, "Pearl Jam")
+        saved = Artist.objects.get(mbid=PEARL_JAM_ID)
+        self.assertEqual(saved.data["rating"]["value"], 4.6)
+        self.assertEqual(len(saved.release_groups), 4)
+        self.assertEqual([c[0] for c in self.client_mb.calls], ["search", "artist", "release_groups"])
+
+    def test_second_lookup_uses_the_database_only(self):
+        self.library.find("Pearl Jam")
+        calls = len(self.client_mb.calls)
+        self.library.find("  pearl jam ")  # same name, different spacing and case
+        self.assertEqual(len(self.client_mb.calls), calls)
+
+    def test_combined_names_fall_back_to_the_first_artist(self):
+        artist = self.library.find("Tame Impala [+] Jennie")
+        self.assertEqual(artist.name, "Tame Impala")
+        self.assertEqual(self.client_mb.calls[:2], [("search", "Tame Impala [+] Jennie"), ("search", "Tame Impala")])
+
+    def test_a_close_but_different_name_is_not_a_match(self):
+        self.assertIsNone(self.library.find("Unknown Band"))
+
+    def test_no_match_is_remembered(self):
+        self.library.find("Unknown Band")
+        calls = len(self.client_mb.calls)
+        self.assertIsNone(self.library.find("Unknown Band"))
+        self.assertEqual(len(self.client_mb.calls), calls)
+
+    def test_old_data_is_refreshed(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from hub.models import Artist
+
+        self.library.find("Pearl Jam")
+        Artist.objects.update(fetched_at=timezone.now() - timedelta(days=31))
+        self.library.find("Pearl Jam")
+        self.assertEqual([c[0] for c in self.client_mb.calls].count("artist"), 2)
+
+
+class ArtistProfileTests(TestCase):
+    def profile(self):
+        from django.utils import timezone
+
+        from hub.models import Artist
+        from hub.musicbrainz import artist_profile
+
+        artist = Artist.objects.create(mbid=PEARL_JAM_ID, name="Pearl Jam", data=PEARL_JAM,
+                                       release_groups=RELEASE_GROUPS, fetched_at=timezone.now())
+        return artist_profile(artist)
+
+    def test_facts(self):
+        p = self.profile()
+        self.assertEqual((p["type"], p["origin"], p["active"]), ("Group", "Seattle, United States", "1990–present"))
+        self.assertEqual(p["genres"], ["grunge", "rock"])  # most votes first
+        self.assertEqual(p["tags"], ["seattle"])  # genres are not repeated as tags
+        self.assertEqual(p["image"], "https://commons.wikimedia.org/wiki/Special:FilePath/PJ.jpg?width=640")
+
+    def test_members_current_first_with_roles(self):
+        members = self.profile()["members"]
+        self.assertEqual([m["name"] for m in members], ["Eddie Vedder", "Dave Krusen"])
+        self.assertEqual(members[0]["roles"], ["lead vocals"])
+        self.assertTrue(members[0]["original"])
+        self.assertEqual(members[1]["years"], "1990–1991")
+
+    def test_a_member_listed_once_per_role_appears_once(self):
+        from django.utils import timezone
+
+        from hub.models import Artist
+        from hub.musicbrainz import artist_profile
+
+        data = {**PEARL_JAM, "relations": PEARL_JAM["relations"] + [
+            {"target-type": "artist", "type": "member of band", "direction": "backward", "begin": "1990", "ended": False,
+             "attributes": ["guitar"], "artist": {"id": VEDDER_ID, "name": "Eddie Vedder"}},
+        ]}
+        artist = Artist.objects.create(mbid=PEARL_JAM_ID, name="Pearl Jam", data=data, release_groups=[], fetched_at=timezone.now())
+        members = artist_profile(artist)["members"]
+        self.assertEqual([m["name"] for m in members], ["Eddie Vedder", "Dave Krusen"])
+        self.assertEqual(members[0]["roles"], ["lead vocals", "guitar"])
+
+    def test_discography_sections(self):
+        sections = {s["label"]: [r["title"] for r in s["releases"]] for s in self.profile()["discography"]}
+        self.assertEqual(sections, {"Albums": ["Ten", "Vs."], "Singles": ["Alive"], "Live": ["Live on Two Legs"]})
+
+    def test_links_are_grouped_and_named(self):
+        links = {g["label"]: [i["label"] for i in g["items"]] for g in self.profile()["links"]}
+        self.assertEqual(links, {"Listen": ["Spotify"], "Official": ["pearljam.com"]})
+
+
+class ArtistPageTests(TestCase):
+    def setUp(self):
+        from hub.musicbrainz import MusicBrainzClient
+
+        fake = FakeMusicBrainz()
+        patcher = mock.patch("hub.musicbrainz.MusicBrainzClient", return_value=fake)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.fake = fake
+        self.real_client = MusicBrainzClient
+
+    def test_lookup_redirects_to_the_artist_page(self):
+        response = self.client.get(reverse("hub:artist_lookup"), {"name": "Pearl Jam"})
+        self.assertRedirects(response, reverse("hub:artist", args=[PEARL_JAM_ID]))
+
+    def test_artist_page_shows_the_details(self):
+        self.client.get(reverse("hub:artist_lookup"), {"name": "Pearl Jam"})
+        response = self.client.get(reverse("hub:artist", args=[PEARL_JAM_ID]))
+        for text in ["Pearl Jam", "Seattle, United States", "grunge", "Eddie Vedder", "lead vocals", "Ten", "Official site",
+                     "Mookie Blaylock", "0000000123426109", "coverartarchive.org/release-group/aaaaaaaa-0000-0000-0000-000000000002"]:
+            self.assertContains(response, text)
+
+    def test_member_pages_are_fetched_when_first_opened(self):
+        response = self.client.get(reverse("hub:artist", args=[VEDDER_ID]))
+        self.assertContains(response, "Eddie Vedder")
+        self.assertIn(("artist", VEDDER_ID), self.fake.calls)
+
+    def test_pages_include_the_loading_overlay(self):
+        with mock.patch.object(RadioModule, "stations", [FakeStation("WEBN", fail=True)]):
+            response = self.client.get(reverse("hub:home"))
+        self.assertContains(response, 'id="loading-overlay"')
+        self.assertContains(response, "Loading artist details")
+
+    def test_unknown_name_shows_not_found(self):
+        response = self.client.get(reverse("hub:artist_lookup"), {"name": "Unknown Band"})
+        self.assertContains(response, "No artist found", status_code=404)
+
+    def test_musicbrainz_down_shows_a_message(self):
+        self.fake.search_artists = mock.Mock(side_effect=requests.ConnectionError("down"))
+        response = self.client.get(reverse("hub:artist_lookup"), {"name": "Somebody New"})
+        self.assertContains(response, "MusicBrainz did not respond", status_code=503)
+
+    def test_radio_card_links_artists_to_their_page(self):
+        stations = [FakeStation("WEBN", [song("Alive", "Pearl Jam", 9999999999)])]
+        with mock.patch.object(RadioModule, "stations", stations):
+            response = self.client.get(reverse("hub:home"))
+        self.assertContains(response, f'{reverse("hub:artist_lookup")}?name=Pearl%20Jam')
+        self.assertContains(response, 'class="card-link"')
+
+
+class MusicBrainzClientTests(TestCase):
+    def test_identifies_itself_and_retries_once_when_told_to_slow_down(self):
+        from hub.musicbrainz import USER_AGENT, MusicBrainzClient
+
+        busy = mock.Mock(status_code=503)
+        ok = mock.Mock(status_code=200, json=lambda: {"artists": []})
+        client = MusicBrainzClient()
+        client.min_interval = client.retry_delay = 0
+        with mock.patch("hub.musicbrainz.requests.get", side_effect=[busy, ok]) as get:
+            self.assertEqual(client.search_artists("Pearl Jam"), [])
+        self.assertEqual(get.call_count, 2)
+        self.assertEqual(get.call_args.kwargs["headers"]["User-Agent"], USER_AGENT)
+
+    def test_waits_between_requests(self):
+        from hub.musicbrainz import MusicBrainzClient
+
+        ok = mock.Mock(status_code=200, json=lambda: {"artists": []})
+        client = MusicBrainzClient()
+        with mock.patch("hub.musicbrainz.requests.get", return_value=ok), \
+                mock.patch("hub.musicbrainz.time.sleep") as sleep:
+            client.search_artists("A")
+            client.search_artists("B")
+        self.assertTrue(any(call.args[0] > 0.5 for call in sleep.call_args_list))

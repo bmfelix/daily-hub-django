@@ -1,0 +1,156 @@
+{% extends "hub/base.html" %}
+
+{% block title %}{{ artist.name }}{% endblock %}
+
+{% block content %}
+<article class="artist">
+  <header class="artist-hero">
+    <div class="artist-photo">
+      {% if artist.image %}
+        <img src="{{ artist.image }}" alt="{{ artist.name }}" width="320" height="320" onerror="this.remove()">
+      {% endif %}
+      <span class="artist-monogram" aria-hidden="true">{{ artist.name|slice:":1" }}</span>
+    </div>
+
+    <div class="artist-intro">
+      <p class="artist-kicker">{{ artist.type|default:"Artist" }}{% if artist.gender %} · {{ artist.gender }}{% endif %}</p>
+      <h1>{{ artist.name }}</h1>
+      {% if artist.disambiguation %}<p class="artist-note">{{ artist.disambiguation }}</p>{% endif %}
+
+      <dl class="artist-facts">
+        {% if artist.origin %}<div><dt>From</dt><dd>{{ artist.origin }}</dd></div>{% endif %}
+        {% if artist.active %}<div><dt>{% if artist.ended %}Active{% else %}Since{% endif %}</dt><dd>{{ artist.active }}</dd></div>{% endif %}
+        {% if artist.rating %}<div><dt>Rating</dt><dd>★ {{ artist.rating }} <span class="meta">({{ artist.rating_votes }} votes)</span></dd></div>{% endif %}
+        <div><dt>Releases</dt><dd>{{ artist.release_count }}</dd></div>
+      </dl>
+
+      {% if artist.genres %}
+        <ul class="chips" aria-label="Genres">
+          {% for genre in artist.genres|slice:":8" %}<li>{{ genre }}</li>{% endfor %}
+        </ul>
+      {% endif %}
+
+      {% if artist.quick_links or artist.official_url %}
+        <ul class="artist-actions" aria-label="Listen">
+          {% if artist.official_url %}<li><a class="pill pill-solid" href="{{ artist.official_url }}" rel="noopener" target="_blank">Official site</a></li>{% endif %}
+          {% for link in artist.quick_links %}
+            <li><a class="pill" href="{{ link.url }}" rel="noopener" target="_blank">{{ link.label }}</a></li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+  </header>
+
+  {% if artist.members %}
+    <section class="artist-section">
+      <h2>Members</h2>
+      <ul class="people">
+        {% for person in artist.members %}
+          <li class="person{% if not person.current %} is-former{% endif %}">
+            <span class="avatar" aria-hidden="true">{{ person.name|slice:":1" }}</span>
+            <div>
+              <a href="{% url 'hub:artist' person.mbid %}">{{ person.name }}</a>
+              <span class="meta">{{ person.years }}{% if person.original %} · original member{% endif %}{% if not person.current %} · former{% endif %}</span>
+              {% if person.roles %}<span class="roles">{{ person.roles|join:", " }}</span>{% endif %}
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  {% if artist.member_of %}
+    <section class="artist-section">
+      <h2>Member of</h2>
+      <ul class="people">
+        {% for band in artist.member_of %}
+          <li class="person{% if not band.current %} is-former{% endif %}">
+            <span class="avatar" aria-hidden="true">{{ band.name|slice:":1" }}</span>
+            <div>
+              <a href="{% url 'hub:artist' band.mbid %}">{{ band.name }}</a>
+              <span class="meta">{{ band.years }}</span>
+              {% if band.roles %}<span class="roles">{{ band.roles|join:", " }}</span>{% endif %}
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  {% if artist.discography %}
+    <section class="artist-section">
+      <h2>Discography</h2>
+      {% for section in artist.discography %}
+        <details class="releases" {% if forloop.first %}open{% endif %}>
+          <summary>{{ section.label }} <span class="meta">{{ section.total }}</span></summary>
+          <ul class="covers">
+            {% for release in section.releases %}
+              <li>
+                <a href="https://musicbrainz.org/release-group/{{ release.mbid }}" rel="noopener" target="_blank">
+                  <span class="cover">
+                    <img src="{{ release.cover }}" alt="" width="250" height="250" loading="lazy" onerror="this.remove()">
+                    <span class="cover-fallback" aria-hidden="true">♪</span>
+                  </span>
+                  <strong>{{ release.title }}</strong>
+                  <span class="meta">{{ release.year|default:"Year unknown" }}</span>
+                </a>
+              </li>
+            {% endfor %}
+          </ul>
+          {% if section.total > section.releases|length %}
+            <p class="meta">Showing {{ section.releases|length }} of {{ section.total }}. <a href="{{ artist.musicbrainz_url }}" rel="noopener" target="_blank">See them all on MusicBrainz</a></p>
+          {% endif %}
+        </details>
+      {% endfor %}
+    </section>
+  {% endif %}
+
+  {% if artist.links %}
+    <section class="artist-section">
+      <h2>Links</h2>
+      <div class="link-groups">
+        {% for group in artist.links %}
+          <div>
+            <h3>{{ group.label }}</h3>
+            <ul class="pills">
+              {% for link in group.items %}
+                <li><a class="pill" href="{{ link.url }}" rel="noopener" target="_blank" title="{{ link.kind }}">{{ link.label }}</a></li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  {% for kind, people in artist.related.items %}
+    <section class="artist-section">
+      <h2>{{ kind }}</h2>
+      <ul class="pills">
+        {% for person in people %}
+          <li><a class="pill" href="{% url 'hub:artist' person.mbid %}">{{ person.name }}{% if person.years %} <span class="meta">{{ person.years }}</span>{% endif %}</a></li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endfor %}
+
+  <section class="artist-section artist-details">
+    {% if artist.aliases %}
+      <div><h2>Also known as</h2><p>{{ artist.aliases|join:" · " }}</p></div>
+    {% endif %}
+    {% if artist.tags %}
+      <div><h2>Tags</h2><ul class="chips chips-quiet">{% for tag in artist.tags %}<li>{{ tag }}</li>{% endfor %}</ul></div>
+    {% endif %}
+    <div>
+      <h2>Identifiers</h2>
+      <dl class="artist-ids">
+        <div><dt>MusicBrainz</dt><dd><a href="{{ artist.musicbrainz_url }}" rel="noopener" target="_blank">{{ artist.mbid }}</a></dd></div>
+        {% for isni in artist.isnis %}<div><dt>ISNI</dt><dd>{{ isni }}</dd></div>{% endfor %}
+        {% for ipi in artist.ipis %}<div><dt>IPI</dt><dd>{{ ipi }}</dd></div>{% endfor %}
+      </dl>
+    </div>
+  </section>
+
+  <p class="source">Data from MusicBrainz, saved {{ artist.fetched_at|date:"j M Y" }}. Photo from Wikimedia Commons, covers from the Cover Art Archive.</p>
+</article>
+{% endblock %}

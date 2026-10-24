@@ -14,6 +14,7 @@ class RadioListener:
 
     def __init__(self):
         self.last_seen = None
+        self.last_card = None
 
     @staticmethod
     def signature(card):
@@ -27,6 +28,7 @@ class RadioListener:
     def check(self):
         """Broadcast if anything changed since the last check. Returns True when it broadcast."""
         card = RadioModule.card()
+        self.last_card = card
         seen = self.signature(card)
         if seen == self.last_seen:
             return False
@@ -35,3 +37,12 @@ class RadioListener:
         # Remember only after a successful send, so a failed broadcast is retried.
         self.last_seen = seen
         return True
+
+    def current_artists(self):
+        """The artist names on air at the last check."""
+        names = []
+        for item in (self.last_card or {}).get("stations", []):
+            track = (item.get("tracks") or [None])[0]
+            if track and track["artist"]:
+                names.append(track["artist"])
+        return names

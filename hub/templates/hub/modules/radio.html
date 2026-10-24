@@ -19,7 +19,7 @@
                 <div>
                   <span class="meta">{% if track.playing %}Now playing{% else %}{{ track.played_at|time:"g:i A" }}{% endif %}</span>
                   <strong>{{ track.title }}</strong>
-                  <span>{{ track.artist }}</span>
+                  <a class="artist-link" href="{% url 'hub:artist_lookup' %}?name={{ track.artist|urlencode }}">{{ track.artist }}</a>
                 </div>
               </li>
             {% empty %}

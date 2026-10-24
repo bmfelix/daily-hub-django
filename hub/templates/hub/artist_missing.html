@@ -1,0 +1,11 @@
+{% extends "hub/base.html" %}
+
+{% block title %}Artist not found{% endblock %}
+
+{% block content %}
+  <h1>{% if error %}Artist details unavailable{% else %}No artist found{% endif %}</h1>
+  <p class="notice">
+    {% if error %}{{ error }}{% else %}MusicBrainz has no artist called “{{ name }}”.{% endif %}
+  </p>
+  <p><a href="{% url 'hub:radio' %}">Back to Radio</a></p>
+{% endblock %}

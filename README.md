@@ -34,6 +34,16 @@ The Radio card on the homepage updates without a reload:
 
 The web container runs **Uvicorn** (an ASGI server) so it can serve both pages and WebSockets.
 
+## Artist pages
+
+Click an artist on the homepage card or the Radio page to see everything MusicBrainz has on them: photo, origin, active years, rating, genres, members (with roles and years), the full discography with cover art, links (listen, official, social, concerts, buy, reference), aliases, related artists, and identifiers.
+
+- **Fetched once, then saved.** `hub/musicbrainz.py` looks the artist up the first time and stores the full record in Postgres (`Artist`), plus which radio name matched it (`ArtistName`, which also remembers names with no match). Saved artists are refreshed after 30 days; unmatched names are retried after 7.
+- **Fetched ahead of time.** The listener looks up each artist as their song comes on, so most clicks open instantly. If a lookup is still needed, the page shows a "please wait" overlay.
+- **Polite to MusicBrainz.** Every request names the app and a contact address, requests are at least 1.1 seconds apart, and a "slow down" reply (503) is retried once.
+- **Careful matching.** A result must match the name (or an alias), not just look similar. For "A [+] B" or "A, B & C", the full name is tried first, then the first artist.
+- Photos come from Wikimedia Commons and covers from the Cover Art Archive; both are linked from MusicBrainz.
+
 ## Run with Docker
 
 1. `cp .env.example .env` and set a secret key and database password.
