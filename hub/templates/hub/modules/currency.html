@@ -1,0 +1,38 @@
+{% extends "hub/base.html" %}
+
+{% block title %}{{ module.title }}{% endblock %}
+
+{% block content %}
+  <h1>{{ module.title }}</h1>
+
+  {% if currencies %}
+    <form class="inline-form" method="get">
+      <label for="amount">Amount</label>
+      <input id="amount" name="amount" value="{{ amount }}" inputmode="decimal" required>
+      <label for="from">From</label>
+      <select id="from" name="from">
+        {% for code, name in currencies.items %}
+          <option value="{{ code }}" {% if code == source %}selected{% endif %}>{{ code }} · {{ name }}</option>
+        {% endfor %}
+      </select>
+      <label for="to">To</label>
+      <select id="to" name="to">
+        {% for code, name in currencies.items %}
+          <option value="{{ code }}" {% if code == target %}selected{% endif %}>{{ code }} · {{ name }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Convert</button>
+    </form>
+  {% endif %}
+
+  {% if error %}
+    <p class="notice">{{ error }}</p>
+  {% elif conversion %}
+    <section class="panel">
+      <p class="big">{{ conversion.result }} {{ target }}</p>
+      <p>{{ amount }} {{ source }} at 1 {{ source }} = {{ conversion.rate }} {{ target }}{% if conversion.date %} (rate from {{ conversion.date }}){% endif %}</p>
+    </section>
+  {% endif %}
+
+  <p class="source">Data: Frankfurter (European Central Bank rates)</p>
+{% endblock %}

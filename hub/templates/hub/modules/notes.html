@@ -1,0 +1,36 @@
+{% extends "hub/base.html" %}
+
+{% block title %}{{ module.title }}{% endblock %}
+
+{% block content %}
+  <h1>{{ module.title }}</h1>
+
+  <div class="split">
+    <aside>
+      <p><a href="{% url 'hub:notes' %}">+ New note</a></p>
+      <ul class="list">
+        {% for item in notes %}
+          <li class="panel{% if item == note %} is-active{% endif %}">
+            <a href="?note={{ item.pk }}">{{ item.title }}</a>
+            <span class="meta">Updated {{ item.updated_at|date:"j M Y, H:i" }}</span>
+          </li>
+        {% empty %}
+          <li class="lead">No notes yet.</li>
+        {% endfor %}
+      </ul>
+    </aside>
+
+    <section class="panel">
+      <h2>{% if note %}Edit note{% else %}New note{% endif %}</h2>
+      <form class="stack-form" method="post">
+        {% csrf_token %}
+        {% if note %}<input type="hidden" name="note" value="{{ note.pk }}">{% endif %}
+        {{ form.as_div }}
+        <div class="actions">
+          <button type="submit" name="action" value="save">Save</button>
+          {% if note %}<button class="link-button" type="submit" name="action" value="delete">Delete</button>{% endif %}
+        </div>
+      </form>
+    </section>
+  </div>
+{% endblock %}

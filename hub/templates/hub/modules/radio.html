@@ -1,0 +1,35 @@
+{% extends "hub/base.html" %}
+
+{% block title %}{{ module.title }}{% endblock %}
+
+{% block content %}
+  <h1>{{ module.title }}</h1>
+
+  <div class="stations">
+    {% for item in stations %}
+      <section class="panel">
+        <h2>{{ item.station.name }} <span class="meta">{{ item.station.frequency }}</span></h2>
+        {% if item.error %}
+          <p class="notice">{{ item.error }}</p>
+        {% else %}
+          <ol class="tracks">
+            {% for track in item.tracks %}
+              <li class="now-playing{% if track.playing %} is-playing{% endif %}">
+                {% if track.image %}<img src="{{ track.image }}" alt="" width="48" height="48">{% endif %}
+                <div>
+                  <span class="meta">{% if track.playing %}Now playing{% else %}{{ track.played_at|time:"g:i A" }}{% endif %}</span>
+                  <strong>{{ track.title }}</strong>
+                  <span>{{ track.artist }}</span>
+                </div>
+              </li>
+            {% empty %}
+              <li class="lead">No songs yet.</li>
+            {% endfor %}
+          </ol>
+        {% endif %}
+      </section>
+    {% endfor %}
+  </div>
+
+  <p class="source">Data: iHeartRadio (WEBN) and Triton Digital (WKRQ). Times are Cincinnati time.</p>
+{% endblock %}

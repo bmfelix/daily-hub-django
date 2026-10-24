@@ -1,0 +1,22 @@
+{% extends "hub/base.html" %}
+
+{% block title %}{{ module.title }}{% endblock %}
+
+{% block content %}
+  <h1>{{ module.title }}</h1>
+
+  {% if error %}
+    <p class="notice">{{ error }}</p>
+  {% else %}
+    <ol class="list">
+      {% for story in stories %}
+        <li class="panel">
+          <a href="{{ story.url }}" rel="noopener" target="_blank">{{ story.title }}</a>
+          <span class="meta">{{ story.points }} points · by {{ story.author }} · <a href="{{ story.discussion }}" rel="noopener" target="_blank">{{ story.comments }} comments</a></span>
+        </li>
+      {% endfor %}
+    </ol>
+  {% endif %}
+
+  <p class="source">Data: Hacker News</p>
+{% endblock %}

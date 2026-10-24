@@ -1,0 +1,36 @@
+{% extends "hub/base.html" %}
+
+{% block title %}{{ module.title }}{% endblock %}
+
+{% block content %}
+  <h1>{{ module.title }}</h1>
+
+  <form class="inline-form" method="get">
+    <label for="city">City</label>
+    <input id="city" name="city" value="{{ city }}" required>
+    <button type="submit">Show weather</button>
+  </form>
+
+  {% if error %}
+    <p class="notice">{{ error }}</p>
+  {% else %}
+    <section class="panel">
+      <h2>{{ place.name }}{% if place.country %}, {{ place.country }}{% endif %}</h2>
+      <p class="big">{{ current.temperature }}°C</p>
+      <p>{{ current.label }} · Feels like {{ current.feels_like }}°C · Wind {{ current.wind }} km/h</p>
+    </section>
+
+    <h2>Next 5 days</h2>
+    <ul class="forecast">
+      {% for day in days %}
+        <li class="panel">
+          <strong>{{ day.date }}</strong>
+          <span>{{ day.label }}</span>
+          <span>{{ day.low }}° / {{ day.high }}°</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  <p class="source">Data: Open-Meteo</p>
+{% endblock %}

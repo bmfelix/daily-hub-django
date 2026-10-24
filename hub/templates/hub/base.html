@@ -1,0 +1,41 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Daily Hub{% endblock %} · Daily Hub</title>
+  <link rel="stylesheet" href="{% static 'hub/style.css' %}">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="{% url 'hub:home' %}">Daily Hub</a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-menu">Menu</button>
+      <nav id="site-menu" class="site-menu" aria-label="Main">
+        <ul>
+          <li><a href="{% url 'hub:home' %}" {% if request.resolver_match.url_name == 'home' %}aria-current="page"{% endif %}>Home</a></li>
+          {% for item in menu_modules %}
+            <li><a href="{% url 'hub:'|add:item.slug %}" {% if request.resolver_match.url_name == item.slug %}aria-current="page"{% endif %}>{{ item.title }}</a></li>
+          {% endfor %}
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer wrap">Daily Hub · Django version</footer>
+
+  <script>
+    const toggle = document.querySelector(".menu-toggle");
+    const menu = document.getElementById("site-menu");
+    toggle.addEventListener("click", () => {
+      const open = toggle.getAttribute("aria-expanded") === "true";
+      toggle.setAttribute("aria-expanded", String(!open));
+      menu.classList.toggle("is-open", !open);
+    });
+  </script>
+</body>
+</html>

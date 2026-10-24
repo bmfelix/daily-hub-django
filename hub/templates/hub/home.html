@@ -1,0 +1,20 @@
+{% extends "hub/base.html" %}
+{% load static %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+  <h1>Your day at a glance</h1>
+  <p class="lead">Pick a module from the menu or below.</p>
+
+  <div class="cards">
+    {% for card in cards %}
+      <a class="card" href="{% url 'hub:'|add:card.module.slug %}">
+        <h2>{{ card.module.title }}</h2>
+        {% include card.template %}
+      </a>
+    {% endfor %}
+  </div>
+
+  <script src="{% static 'hub/live.js' %}" defer></script>
+{% endblock %}

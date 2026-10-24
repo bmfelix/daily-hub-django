@@ -1,0 +1,40 @@
+{% extends "hub/base.html" %}
+
+{% block title %}{{ module.title }}{% endblock %}
+
+{% block content %}
+  <h1>{{ module.title }}</h1>
+
+  <form class="inline-form" method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add">
+    <label for="{{ form.title.id_for_label }}">New task</label>
+    {{ form.title }}
+    <button type="submit">Add</button>
+  </form>
+  {% if form.title.errors %}<p class="notice">{{ form.title.errors.0 }}</p>{% endif %}
+
+  {% if tasks %}
+    <ul class="list">
+      {% for task in tasks %}
+        <li class="panel task{% if task.done %} is-done{% endif %}">
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="toggle">
+            <input type="hidden" name="task" value="{{ task.pk }}">
+            <button class="link-button" type="submit" aria-label="Mark {{ task.title }} as {% if task.done %}not done{% else %}done{% endif %}">{% if task.done %}☑{% else %}☐{% endif %}</button>
+          </form>
+          <span class="task-title">{{ task.title }}</span>
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="task" value="{{ task.pk }}">
+            <button class="link-button" type="submit">Delete</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="lead">No tasks yet.</p>
+  {% endif %}
+{% endblock %}

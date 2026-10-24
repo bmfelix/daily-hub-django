@@ -1,0 +1,18 @@
+<ul class="now-playing-list" data-live-card="radio">
+  {% for item in card.stations %}
+    <li class="now-playing">
+      {% with track=item.tracks.0 %}
+        {% if track.image %}<img src="{{ track.image }}" alt="" width="48" height="48">{% endif %}
+        <div>
+          <span class="meta">{{ item.station.name }} · {% if track %}{% if track.playing %}Now playing{% else %}Last played{% endif %}{% else %}Unavailable{% endif %}</span>
+          {% if track %}
+            <strong>{{ track.title }}</strong>
+            <span>{{ track.artist }}</span>
+          {% else %}
+            <span>{{ item.error|default:"No songs yet." }}</span>
+          {% endif %}
+        </div>
+      {% endwith %}
+    </li>
+  {% endfor %}
+</ul>
