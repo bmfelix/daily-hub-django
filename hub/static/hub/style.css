@@ -131,7 +131,7 @@ main { padding-top: 24px; padding-bottom: 24px; }
   background: color-mix(in srgb, var(--accent) 22%, var(--surface)); display: grid; place-items: center;
   box-shadow: 0 10px 30px rgb(0 0 0 / 0.18);
 }
-.artist-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.artist-photo img { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; object-fit: cover; } /* above the monogram */
 .artist-monogram { font-size: 5rem; font-weight: 800; color: var(--accent); opacity: 0.6; }
 .artist-kicker { margin: 0; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.8rem; color: var(--muted); }
 .artist-intro h1 { margin: 4px 0; font-size: clamp(2rem, 6vw, 3.25rem); line-height: 1.05; letter-spacing: -0.02em; }
