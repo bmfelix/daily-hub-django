@@ -38,17 +38,19 @@
           {% for item in menu_modules %}
             <li><a href="{% url 'hub:'|add:item.slug %}" {% if request.resolver_match.url_name == item.slug %}aria-current="page"{% endif %}>{{ item.title }}</a></li>
           {% endfor %}
-          {% if user.is_staff %}
-            <li><a href="{% url 'admin:index' %}">Admin</a></li>
-            <li>
-              <form method="post" action="{% url 'admin:logout' %}">
-                {% csrf_token %}
-                <input type="hidden" name="next" value="{{ request.path }}">
-                <button class="menu-button" type="submit">Log out</button>
-              </form>
-            </li>
-          {% else %}
-            <li><a href="{% url 'admin:login' %}?next={{ request.path|urlencode }}">Log in</a></li>
+          {% if require_login %}
+            {% if user.is_staff %}
+              <li><a href="{% url 'admin:index' %}">Admin</a></li>
+              <li>
+                <form method="post" action="{% url 'admin:logout' %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ request.path }}">
+                  <button class="menu-button" type="submit">Log out</button>
+                </form>
+              </li>
+            {% else %}
+              <li><a href="{% url 'admin:login' %}?next={{ request.path|urlencode }}">Log in</a></li>
+            {% endif %}
           {% endif %}
         </ul>
       </nav>
