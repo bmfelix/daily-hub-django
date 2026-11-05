@@ -12,7 +12,7 @@
     <h2>Three builds</h2>
     <div class="table-scroll">
       <table class="compare">
-        <thead><tr><th scope="col"></th><th scope="col">Django</th><th scope="col">Next.js</th><th scope="col">Laravel</th></tr></thead>
+        <thead><tr><th scope="col"></th><th scope="col">{% if sites.django %}<a href="{{ sites.django }}">Django</a>{% else %}Django{% endif %}</th><th scope="col">{% if sites.nextjs %}<a href="{{ sites.nextjs }}">Next.js</a>{% else %}Next.js{% endif %}</th><th scope="col">{% if sites.laravel %}<a href="{{ sites.laravel }}">Laravel</a>{% else %}Laravel{% endif %}</th></tr></thead>
         <tbody>
           <tr><th scope="row">Language</th><td>Python</td><td>TypeScript</td><td>PHP</td></tr>
           <tr><th scope="row">Framework</th><td>Django 6</td><td>Next.js 16, React 19</td><td>Laravel 13</td></tr>

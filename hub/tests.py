@@ -154,67 +154,31 @@ class NewsTests(TestCase):
         self.assertContains(response, "did not respond")
 
 
-class TodoTests(TestCase):
-    url = reverse("hub:todo")
+class ReadOnlyTests(TestCase):
+    def test_todo_lists_tasks_without_forms(self):
+        Task.objects.create(title="Buy milk")
+        response = self.client.get(reverse("hub:todo"))
+        self.assertContains(response, "Buy milk")
+        self.assertNotContains(response, "<form method=\"post\">")
+        self.assertNotContains(response, 'name="action"')
 
-    def setUp(self):
+    def test_notes_show_without_forms(self):
+        note = Note.objects.create(title="Idea", body="Some text")
+        response = self.client.get(reverse("hub:notes"), {"note": note.pk})
+        self.assertContains(response, "Some text")
+        self.assertNotContains(response, "<textarea")
+        self.assertNotContains(response, "New note")
+
+    def test_a_missing_note_is_404(self):
+        self.assertEqual(self.client.get(reverse("hub:notes"), {"note": 999}).status_code, 404)
+
+    def test_staff_cannot_change_anything_through_the_pages(self):
         self.client.force_login(editor())
-
-    def test_add_task(self):
-        response = self.client.post(self.url, {"action": "add", "title": "Buy milk"})
-        self.assertRedirects(response, self.url)
-        self.assertTrue(Task.objects.filter(title="Buy milk").exists())
-
-    def test_empty_title_shows_error(self):
-        response = self.client.post(self.url, {"action": "add", "title": ""})
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "This field is required")
+        response = self.client.post(reverse("hub:todo"), {"action": "add", "title": "Nope"})
+        self.assertEqual(response.status_code, 405)
+        self.assertEqual(self.client.post(reverse("hub:notes"), {"title": "Nope"}).status_code, 405)
         self.assertFalse(Task.objects.exists())
-
-    def test_toggle_task(self):
-        task = Task.objects.create(title="Walk")
-        self.client.post(self.url, {"action": "toggle", "task": task.pk})
-        task.refresh_from_db()
-        self.assertTrue(task.done)
-
-    def test_delete_task(self):
-        task = Task.objects.create(title="Walk")
-        self.client.post(self.url, {"action": "delete", "task": task.pk})
-        self.assertFalse(Task.objects.exists())
-
-    def test_missing_task_is_404(self):
-        response = self.client.post(self.url, {"action": "toggle", "task": 999})
-        self.assertEqual(response.status_code, 404)
-
-
-class NotesTests(TestCase):
-    url = reverse("hub:notes")
-
-    def setUp(self):
-        self.client.force_login(editor())
-
-    def test_create_note(self):
-        response = self.client.post(self.url, {"action": "save", "title": "Idea", "body": "Text"})
-        note = Note.objects.get()
-        self.assertRedirects(response, f"{self.url}?note={note.pk}")
-
-    def test_edit_note(self):
-        note = Note.objects.create(title="Old")
-        self.client.post(self.url, {"action": "save", "note": note.pk, "title": "New", "body": ""})
-        note.refresh_from_db()
-        self.assertEqual(note.title, "New")
-        self.assertEqual(Note.objects.count(), 1)
-
-    def test_delete_note(self):
-        note = Note.objects.create(title="Gone")
-        self.client.post(self.url, {"action": "delete", "note": note.pk})
         self.assertFalse(Note.objects.exists())
-
-    def test_open_note_fills_form(self):
-        note = Note.objects.create(title="Shown", body="Body text")
-        response = self.client.get(self.url, {"note": note.pk})
-        self.assertContains(response, "Edit note")
-        self.assertContains(response, "Body text")
 
 
 class FakeResponse:

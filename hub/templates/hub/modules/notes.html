@@ -8,11 +8,6 @@
 
   <div class="split">
     <aside>
-      {% if can_edit %}
-        <p><a href="{% url 'hub:notes' %}">+ New note</a></p>
-      {% else %}
-        <p class="lead"><a href="{% url 'admin:login' %}?next={{ request.path|urlencode }}">Log in</a> to change notes.</p>
-      {% endif %}
       <ul class="list">
         {% for item in notes %}
           <li class="panel{% if item == note %} is-active{% endif %}">
@@ -26,18 +21,7 @@
     </aside>
 
     <section class="panel">
-      {% if can_edit %}
-        <h2>{% if note %}Edit note{% else %}New note{% endif %}</h2>
-        <form class="stack-form" method="post">
-          {% csrf_token %}
-          {% if note %}<input type="hidden" name="note" value="{{ note.pk }}">{% endif %}
-          {{ form.as_div }}
-          <div class="actions">
-            <button type="submit" name="action" value="save">Save</button>
-            {% if note %}<button class="link-button" type="submit" name="action" value="delete">Delete</button>{% endif %}
-          </div>
-        </form>
-      {% elif note %}
+      {% if note %}
         <h2>{{ note.title }}</h2>
         {{ note.body|linebreaks }}
       {% else %}
