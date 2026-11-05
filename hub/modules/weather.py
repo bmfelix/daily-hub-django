@@ -4,6 +4,11 @@ from .base import HubModule
 
 GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
+REVERSE_GEOCODE_URL = "https://nominatim.openstreetmap.org/reverse"
+USER_AGENT = "DailyHub/1.0"
+
+# Countries and territories that report the weather in Fahrenheit.
+FAHRENHEIT_COUNTRIES = {"US", "PR", "GU", "VI", "AS", "MP", "BS", "BZ", "KY", "LR", "PW", "FM", "MH"}
 
 # WMO weather codes used by Open-Meteo, grouped into plain labels.
 WEATHER_CODES = {
@@ -19,7 +24,7 @@ WEATHER_CODES = {
 
 
 class OpenMeteoClient:
-    """Talks to Open-Meteo, a free weather API that needs no key."""
+    """Talks to Open-Meteo, a free weather API that needs no key, and Nominatim for place names."""
 
     timeout = 8
 
@@ -29,7 +34,35 @@ class OpenMeteoClient:
         results = response.json().get("results") or []
         return results[0] if results else None
 
-    def forecast(self, latitude, longitude):
+    def place_at(self, latitude, longitude):
+        """Name the place at these coordinates. Open-Meteo cannot do this, so Nominatim does."""
+        response = requests.get(
+            REVERSE_GEOCODE_URL,
+            params={
+                "format": "jsonv2",
+                "lat": latitude,
+                "lon": longitude,
+                "zoom": 10,
+                "accept-language": "en",
+            },
+            headers={"User-Agent": USER_AGENT},
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        data = response.json()
+        address = data.get("address")
+        if not address:
+            return None
+        names = ("city", "town", "village", "hamlet", "municipality", "county", "state")
+        return {
+            "name": next((address[key] for key in names if address.get(key)), data.get("name")),
+            "country": address.get("country"),
+            "country_code": address.get("country_code", "").upper(),
+            "latitude": latitude,
+            "longitude": longitude,
+        }
+
+    def forecast(self, latitude, longitude, imperial=False):
         response = requests.get(
             FORECAST_URL,
             params={
@@ -39,6 +72,8 @@ class OpenMeteoClient:
                 "daily": "weather_code,temperature_2m_max,temperature_2m_min",
                 "timezone": "auto",
                 "forecast_days": 5,
+                "temperature_unit": "fahrenheit" if imperial else "celsius",
+                "wind_speed_unit": "mph" if imperial else "kmh",
             },
             timeout=self.timeout,
         )
@@ -54,14 +89,32 @@ class WeatherModule(HubModule):
     client_class = OpenMeteoClient
     default_city = "London"
 
+    def coordinates(self):
+        """Return the visitor's position from the URL, or None if it is missing or invalid."""
+        try:
+            latitude = float(self.request.GET.get("lat", ""))
+            longitude = float(self.request.GET.get("lon", ""))
+        except ValueError:
+            return None
+        return (latitude, longitude) if abs(latitude) <= 90 and abs(longitude) <= 180 else None
+
     def load(self):
-        city = self.request.GET.get("city", "").strip() or self.default_city
+        searched = self.request.GET.get("city", "").strip()
+        coordinates = None if searched else self.coordinates()
+        city = "" if coordinates else searched or self.default_city
         client = self.client_class()
         try:
-            place = client.find_place(city)
-            if place is None:
-                return {"city": city, "error": f"No place found called “{city}”."}
-            data = client.forecast(place["latitude"], place["longitude"])
+            if coordinates:
+                place = client.place_at(*coordinates)
+                if place is None:
+                    return {"city": city, "error": "No town found near your location."}
+                city = place["name"]
+            else:
+                place = client.find_place(city)
+                if place is None:
+                    return {"city": city, "error": f"No place found called “{city}”."}
+            imperial = place.get("country_code") in FAHRENHEIT_COUNTRIES
+            data = client.forecast(place["latitude"], place["longitude"], imperial)
         except requests.RequestException:
             return {"city": city, "error": "The weather service did not respond. Try again shortly."}
 
@@ -81,6 +134,8 @@ class WeatherModule(HubModule):
         return {
             "city": city,
             "place": place,
+            "temperature_unit": "°F" if imperial else "°C",
+            "wind_unit": "mph" if imperial else "km/h",
             "current": {
                 "temperature": current["temperature_2m"],
                 "feels_like": current["apparent_temperature"],
