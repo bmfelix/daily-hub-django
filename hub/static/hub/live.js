@@ -11,6 +11,7 @@
     socket.addEventListener("message", (event) => {
       const card = document.querySelector('[data-live-card="radio"]');
       if (card) card.outerHTML = JSON.parse(event.data).html;
+      document.dispatchEvent(new Event("cards-updated")); // the player re-marks the new buttons
     });
     // Reconnect after a drop, waiting longer each time (up to 30 seconds).
     socket.addEventListener("close", () => {

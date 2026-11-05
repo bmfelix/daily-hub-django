@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import requests
 
 from .base import HubModule
@@ -85,6 +87,7 @@ class WeatherModule(HubModule):
     slug = "weather"
     title = "Weather"
     summary = "Current conditions and a 5-day forecast for any city."
+    live_card = True
 
     client_class = OpenMeteoClient
     default_city = "London"
@@ -120,12 +123,18 @@ class WeatherModule(HubModule):
 
         current = data["current"]
         daily = data["daily"]
+        coldest = min(daily["temperature_2m_min"])
+        spread = (max(daily["temperature_2m_max"]) - coldest) or 1
         days = [
             {
                 "date": date,
+                "weekday": datetime.strptime(date, "%Y-%m-%d").strftime("%a"),
                 "label": WEATHER_CODES.get(code, "Unknown"),
                 "high": high,
                 "low": low,
+                # Where this day's range sits on a bar covering the whole week.
+                "bar_start": round((low - coldest) / spread * 100),
+                "bar_width": round((high - low) / spread * 100),
             }
             for date, code, high, low in zip(
                 daily["time"], daily["weather_code"], daily["temperature_2m_max"], daily["temperature_2m_min"]

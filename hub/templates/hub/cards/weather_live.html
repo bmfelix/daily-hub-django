@@ -1,0 +1,12 @@
+{% if error %}
+  <p>{{ error }}</p>
+{% else %}
+  <p class="readout">{{ current.temperature|floatformat:0 }}{{ temperature_unit }}</p>
+  <p>{{ current.label }} in {{ place.name }}</p>
+  <p class="meta">Feels like {{ current.feels_like|floatformat:0 }}° · Wind {{ current.wind|floatformat:0 }} {{ wind_unit }}</p>
+  <ul class="mini-week">
+    {% for day in days|slice:"1:5" %}
+      <li><strong>{{ day.weekday }}</strong><span>{{ day.label }}</span><span>{{ day.low|floatformat:0 }}° / {{ day.high|floatformat:0 }}°</span></li>
+    {% endfor %}
+  </ul>
+{% endif %}

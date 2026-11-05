@@ -5,6 +5,8 @@ from zoneinfo import ZoneInfo
 
 import requests
 
+from ..models import Play, Song
+from ..names import song_key
 from .base import HubModule
 
 IHEART_HISTORY_URL = "https://us.api.iheart.com/api/v3/live-meta/stream/{station}/trackHistory"
@@ -28,6 +30,7 @@ class Station:
 
     name = ""
     frequency = ""
+    stream_url = ""  # the station's live audio
 
     def tracks(self, limit=10):
         """Return recent songs, newest first. Each subclass calls its own API here."""
@@ -47,6 +50,7 @@ class IHeartStation(Station):
 
     def __init__(self, name, frequency, station_id):
         self.name, self.frequency, self.station_id = name, frequency, station_id
+        self.stream_url = f"https://stream.revma.ihrhls.com/zc{station_id}"
 
     def tracks(self, limit=10):
         response = requests.get(
@@ -70,6 +74,7 @@ class TritonStation(Station):
 
     def __init__(self, name, frequency, mount):
         self.name, self.frequency, self.mount = name, frequency, mount
+        self.stream_url = f"https://playerservices.streamtheworld.com/api/livestream-redirect/{mount}.mp3"
 
     def tracks(self, limit=10):
         response = requests.get(
@@ -120,7 +125,32 @@ class RadioModule(HubModule):
 
     @classmethod
     def card(cls):
-        return {"stations": cls.station_data(limit=1)}
+        return {"stations": cls.with_saved_songs(cls.station_data(limit=1))}
 
     def load(self):
-        return {"stations": self.station_data(limit=10)}
+        return {"stations": self.with_saved_songs(self.station_data(limit=10))}
+
+    @staticmethod
+    def with_saved_songs(stations):
+        """Add each track's saved previews. The listener looks songs up, so pages stay fast."""
+        tracks = [track for item in stations for track in item.get("tracks", [])]
+        keys = {song_key(track["artist"], track["title"]) for track in tracks}
+        songs = {song.key: song for song in Song.objects.filter(key__in=keys)}
+        for track in tracks:
+            track["song"] = songs.get(song_key(track["artist"], track["title"]))
+        return stations
+
+    @classmethod
+    def remember_recent(cls):
+        """Save every recent play for the charts, and return (artist, title) for each."""
+        plays = [
+            Play(
+                station=item["station"].name, artist_name=track["artist"], title=track["title"],
+                song_key=song_key(track["artist"], track["title"]), played_at=track["played_at"],
+            )
+            for item in cls.station_data(limit=10)
+            for track in item.get("tracks", [])
+            if track["artist"] and track["title"]
+        ]
+        Play.objects.bulk_create(plays, ignore_conflicts=True)  # plays already saved are skipped
+        return [(play.artist_name, play.title) for play in plays]

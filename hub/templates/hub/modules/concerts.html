@@ -1,0 +1,35 @@
+{% extends "hub/base.html" %}
+
+{% block title %}{{ module.title }}{% endblock %}
+
+{% block content %}
+  <p class="kicker">Live and loud</p>
+  <h1>{{ module.title }}</h1>
+
+  <nav class="filter-pills" aria-label="City">
+    <a class="pill{% if not chosen %} is-chosen{% endif %}" href="{% url 'hub:concerts' %}">All cities</a>
+    {% for city in cities %}
+      <a class="pill{% if chosen == city %} is-chosen{% endif %}" href="?city={{ city|urlencode }}">{{ city }}</a>
+    {% endfor %}
+  </nav>
+
+  {% if error %}
+    <p class="notice">{{ error }}</p>
+  {% elif concerts %}
+    <ul class="shows">
+      {% for show in concerts %}
+        <li class="show">
+          <a href="{{ show.url }}" rel="noopener" target="_blank">
+            <span class="show-image">{% if show.image %}<img src="{{ show.image }}" alt="" loading="lazy">{% endif %}<time datetime="{{ show.date|date:'Y-m-d' }}"><b>{{ show.date|date:"j" }}</b>{{ show.date|date:"M" }}</time></span>
+            <strong>{{ show.name }}</strong>
+            <span class="meta">{{ show.venue }} · {{ show.city }}</span>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="lead">No shows listed right now.</p>
+  {% endif %}
+
+  <p class="source">Data: Ticketmaster</p>
+{% endblock %}

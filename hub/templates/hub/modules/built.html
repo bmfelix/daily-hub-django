@@ -1,0 +1,43 @@
+{% extends "hub/base.html" %}
+
+{% block title %}{{ module.title }}{% endblock %}
+
+{% block content %}
+  <p class="kicker">Behind the mixing desk</p>
+  <h1>{{ module.title }}</h1>
+
+  <p class="about-headline">Daily Hub is one app built three times, in Django, Next.js, and Laravel, so the frameworks can be compared side by side.</p>
+
+  <section class="artist-section about-section">
+    <h2>Three builds</h2>
+    <div class="table-scroll">
+      <table class="compare">
+        <thead><tr><th scope="col"></th><th scope="col">Django</th><th scope="col">Next.js</th><th scope="col">Laravel</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Language</th><td>Python</td><td>TypeScript</td><td>PHP</td></tr>
+          <tr><th scope="row">Framework</th><td>Django 6</td><td>Next.js 16, React 19</td><td>Laravel 13</td></tr>
+          <tr><th scope="row">Content and admin</th><td>Django admin</td><td>Payload CMS</td><td>Models and Blade views</td></tr>
+          <tr><th scope="row">Live radio updates</th><td>Channels and Redis over WebSockets</td><td>Server-Sent Events</td><td>Reverb over WebSockets</td></tr>
+          <tr><th scope="row">Pages</th><td>Class-based views and templates</td><td>React Server Components</td><td>Controllers and Blade</td></tr>
+          <tr><th scope="row">Database</th><td>Postgres</td><td>Postgres</td><td>Postgres</td></tr>
+          <tr><th scope="row">Code</th>
+            <td><a href="https://github.com/bmfelix/daily-hub-django" rel="noopener" target="_blank">daily-hub-django</a></td>
+            <td><a href="https://github.com/bmfelix/daily-hub-nextjs" rel="noopener" target="_blank">daily-hub-nextjs</a></td>
+            <td><a href="https://github.com/bmfelix/daily-hub-laravel" rel="noopener" target="_blank">daily-hub-laravel</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="meta">This Django build is the newest. Login, song previews, charts, and this design are being brought to the other two.</p>
+  </section>
+
+  <section class="artist-section about-section">
+    <h2>How the pieces work</h2>
+    <ul class="project-list">
+      <li class="panel"><h3>One class per page</h3><p>Each menu link is a module that owns its page and its API calls. The menu, the homepage, and the URLs are all built from one list.</p></li>
+      <li class="panel"><h3>A background listener</h3><p>A separate process checks both stations every 15 seconds, updates open pages, saves plays for the charts, and looks up artists and song previews ahead of time.</p></li>
+      <li class="panel"><h3>Everything is saved once</h3><p>Artists and songs are fetched from MusicBrainz, Wikipedia, Apple, and Deezer one time, then stored, so pages stay fast and those free services are not overused.</p></li>
+      <li class="panel"><h3>Tests run offline</h3><p>Each outside service sits behind a small client class, so tests swap in a fake and never touch the internet.</p></li>
+    </ul>
+  </section>
+{% endblock %}

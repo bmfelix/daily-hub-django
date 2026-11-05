@@ -1,0 +1,9 @@
+{% if card.songs %}
+  <ol class="card-mini-list">
+    {% for row in card.songs %}
+      <li><span class="number">{{ forloop.counter|stringformat:"02d" }}</span><span>{{ row.title }}<span class="meta"> · {{ row.artist }} · {{ row.plays }} play{{ row.plays|pluralize }}</span></span></li>
+    {% endfor %}
+  </ol>
+{% else %}
+  <p>{{ card.module.summary }}</p>
+{% endif %}

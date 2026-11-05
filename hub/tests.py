@@ -3,15 +3,19 @@ from decimal import Decimal
 from unittest import mock
 
 import requests
+from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
 from .models import Note, Task
 from .modules import MODULES
-from .modules.currency import CurrencyModule
 from .modules.news import NewsModule
 from .modules.radio import IHeartStation, RadioModule, Station, TritonStation
 from .modules.weather import WeatherModule
+
+
+def editor():
+    return User.objects.create_user("editor", password="secret", is_staff=True)
 
 
 class FakeWeatherClient:
@@ -57,15 +61,6 @@ class FakeNewsClient:
         ]
 
 
-class FakeCurrencyClient:
-    def currencies(self):
-        return {"USD": "United States Dollar", "EUR": "Euro"}
-
-    def convert(self, amount, source, target):
-        rate = Decimal("0.9")
-        return {"rate": rate, "result": (amount * rate).quantize(Decimal("0.01")), "date": "2026-10-23"}
-
-
 class BrokenClient:
     """Fails every call, like a service that is down."""
 
@@ -82,7 +77,8 @@ class LayoutTests(TestCase):
             response = self.client.get(reverse("hub:home"))
         self.assertEqual(response.status_code, 200)
         for module in MODULES:
-            self.assertContains(response, reverse(f"hub:{module.slug}"))
+            if module.on_home and not module.staff_only:
+                self.assertContains(response, reverse(f"hub:{module.slug}"))
 
     def test_menu_marks_current_page(self):
         response = self.client.get(reverse("hub:todo"))
@@ -158,32 +154,11 @@ class NewsTests(TestCase):
         self.assertContains(response, "did not respond")
 
 
-@mock.patch.object(CurrencyModule, "client_class", FakeCurrencyClient)
-class CurrencyTests(TestCase):
-    def test_converts(self):
-        response = self.client.get(reverse("hub:currency"), {"amount": "100", "from": "USD", "to": "EUR"})
-        self.assertContains(response, "90.00 EUR")
-
-    def test_same_currency_needs_no_api_call(self):
-        response = self.client.get(reverse("hub:currency"), {"amount": "5", "from": "EUR", "to": "EUR"})
-        self.assertEqual(response.context["conversion"]["result"], Decimal("5"))
-
-    def test_rejects_bad_amount(self):
-        response = self.client.get(reverse("hub:currency"), {"amount": "abc", "from": "USD", "to": "EUR"})
-        self.assertContains(response, "Enter a number")
-
-    def test_rejects_unknown_currency(self):
-        response = self.client.get(reverse("hub:currency"), {"amount": "1", "from": "USD", "to": "XXX"})
-        self.assertContains(response, "Choose currencies from the list")
-
-    def test_service_down(self):
-        with mock.patch.object(CurrencyModule, "client_class", BrokenClient):
-            response = self.client.get(reverse("hub:currency"))
-        self.assertContains(response, "did not respond")
-
-
 class TodoTests(TestCase):
     url = reverse("hub:todo")
+
+    def setUp(self):
+        self.client.force_login(editor())
 
     def test_add_task(self):
         response = self.client.post(self.url, {"action": "add", "title": "Buy milk"})
@@ -214,6 +189,9 @@ class TodoTests(TestCase):
 
 class NotesTests(TestCase):
     url = reverse("hub:notes")
+
+    def setUp(self):
+        self.client.force_login(editor())
 
     def test_create_note(self):
         response = self.client.post(self.url, {"action": "save", "title": "Idea", "body": "Text"})
@@ -306,10 +284,10 @@ class RadioTests(TestCase):
     def test_home_card_shows_each_station_current_song(self):
         with mock.patch.object(RadioModule, "stations", self.stations):
             response = self.client.get(reverse("hub:home"))
-        self.assertContains(response, "WEBN · Now playing")
+        self.assertContains(response, "On air")
         self.assertContains(response, "Self Esteem")
         self.assertNotContains(response, "Simple Man")
-        self.assertContains(response, "WKRQ · Unavailable")
+        self.assertContains(response, "Unavailable")
 
     def test_other_cards_still_show_their_summary(self):
         with mock.patch.object(RadioModule, "stations", self.stations):
@@ -479,12 +457,22 @@ class FakeMusicBrainz:
         return RELEASE_GROUPS if mbid == PEARL_JAM_ID else []
 
 
+class FakeWikipedia:
+    def find(self, record):
+        return None
+
+
+class FakeMusic:
+    def apple_albums(self, artist):
+        return {}
+
+
 class ArtistLibraryTests(TestCase):
     def setUp(self):
         from hub.musicbrainz import ArtistLibrary
 
         self.client_mb = FakeMusicBrainz()
-        self.library = ArtistLibrary(self.client_mb)
+        self.library = ArtistLibrary(self.client_mb, FakeWikipedia(), FakeMusic())
 
     def test_first_lookup_fetches_and_saves_everything(self):
         from hub.models import Artist
@@ -583,9 +571,14 @@ class ArtistPageTests(TestCase):
         from hub.musicbrainz import MusicBrainzClient
 
         fake = FakeMusicBrainz()
-        patcher = mock.patch("hub.musicbrainz.MusicBrainzClient", return_value=fake)
-        patcher.start()
-        self.addCleanup(patcher.stop)
+        for target, replacement in (
+            ("hub.musicbrainz.MusicBrainzClient", fake),
+            ("hub.musicbrainz.WikipediaClient", FakeWikipedia()),
+            ("hub.musicbrainz.MusicClient", FakeMusic()),
+        ):
+            patcher = mock.patch(target, return_value=replacement)
+            patcher.start()
+            self.addCleanup(patcher.stop)
         self.fake = fake
         self.real_client = MusicBrainzClient
 

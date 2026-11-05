@@ -17,6 +17,11 @@ class NotesModule(HubModule):
     slug = "notes"
     title = "Notes"
     summary = "Write, edit, and delete short notes."
+    card_template = "hub/cards/notes.html"
+
+    @classmethod
+    def card(cls):
+        return {"latest": Note.objects.first()}
 
     def current_note(self):
         note_id = self.request.GET.get("note") or self.request.POST.get("note")

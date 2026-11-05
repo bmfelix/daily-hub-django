@@ -1,0 +1,38 @@
+/* The admin in the Daily Hub colours. Django's admin is built from these variables. */
+html, html[data-theme="light"], html[data-theme="dark"], :root {
+  --primary: #33193a;
+  --secondary: #1a141f;
+  --accent: #ffb54a;
+  --primary-fg: #f5eee6;
+  --body-fg: #f5eee6;
+  --body-bg: #0e0a11;
+  --body-quiet-color: #ae9fb3;
+  --body-medium-color: #d8cfc2;
+  --body-loud-color: #fff;
+  --header-color: #ffb54a;
+  --header-branding-color: #ffb54a;
+  --header-bg: #0e0a11;
+  --header-link-color: #f5eee6;
+  --breadcrumbs-bg: #1a141f;
+  --breadcrumbs-fg: #ae9fb3;
+  --breadcrumbs-link-fg: #f5eee6;
+  --link-fg: #ffb54a;
+  --link-hover-color: #ffd08a;
+  --link-selected-fg: #ffd08a;
+  --hairline-color: #372c40;
+  --border-color: #372c40;
+  --darkened-bg: #1a141f;
+  --selected-bg: #33193a;
+  --selected-row: #3a1b35;
+  --button-fg: #231507;
+  --button-bg: #ffb54a;
+  --button-hover-bg: #ffc873;
+  --default-button-bg: #ffb54a;
+  --default-button-hover-bg: #ffc873;
+  --close-button-bg: #4a4238;
+  --close-button-hover-bg: #5c5347;
+  --object-tools-fg: #231507;
+  --object-tools-bg: #ffb54a;
+  --object-tools-hover-bg: #ffc873;
+  color-scheme: dark;
+}

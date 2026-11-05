@@ -1,0 +1,22 @@
+{% if track %}
+  <div class="now-playing">
+    <span class="art">{% if track.artwork %}<img src="{{ track.artwork }}" alt="" width="230" height="230">{% endif %}</span>
+    <div>
+      <span class="on-air{% if track.playing %} is-live{% endif %}">{% if track.playing %}Playing now{% else %}Last played {{ track.played_at|timesince }} ago{% endif %}</span>
+      <strong>{{ track.title }}</strong>
+      <a class="artist-link" href="{% url 'hub:artist_lookup' %}?name={{ track.first_artist|urlencode }}">{{ track.artist }}</a>
+      {% if track.album %}<span class="meta">{{ track.album }}</span>{% endif %}
+      {% if track.url %}<a class="spotify-open" href="{{ track.url }}" rel="noopener" target="_blank">Open in Spotify</a>{% endif %}
+      <a class="spotify-open" href="{% url 'hub:listening' %}">Listening stats</a>
+    </div>
+  </div>
+{% elif error %}
+  <p>{{ error }}</p>
+{% elif not configured %}
+  <p>Spotify listening is not set up yet.</p>
+{% elif user.is_staff %}
+  <p><a class="spotify-open" href="{% url 'hub:spotify_connect' %}">Connect Spotify</a></p>
+  <p>Show what you are playing here.</p>
+{% else %}
+  <p>Nothing to show yet.</p>
+{% endif %}

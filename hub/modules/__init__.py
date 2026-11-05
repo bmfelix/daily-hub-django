@@ -1,4 +1,9 @@
-from .currency import CurrencyModule
+from .about import AboutModule
+from .agenda import AgendaModule
+from .built import BuiltModule
+from .charts import ChartsModule
+from .concerts import ConcertsModule
+from .listening import ListeningModule
 from .news import NewsModule
 from .notes import NotesModule
 from .radio import RadioModule
@@ -10,7 +15,17 @@ MODULES = [
     WeatherModule,
     NewsModule,
     TodoModule,
-    CurrencyModule,
     NotesModule,
+    AgendaModule,
     RadioModule,
+    ChartsModule,
+    ConcertsModule,
+    ListeningModule,
+    AboutModule,
+    BuiltModule,
 ]
+
+
+def visible_modules(user):
+    """The modules this person may see."""
+    return [module for module in MODULES if not module.staff_only or user.is_staff]

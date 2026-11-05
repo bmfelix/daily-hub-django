@@ -1,0 +1,55 @@
+{% extends "hub/base.html" %}
+
+{% block title %}{{ module.title }}{% endblock %}
+
+{% block content %}
+  <p class="kicker">Meet the band</p>
+  <h1>{{ profile.name|default:module.title }}</h1>
+
+  {% if profile.headline %}<p class="about-headline">{{ profile.headline }}</p>{% endif %}
+  {% if profile.bio %}
+    <div class="artist-about">{{ profile.bio|linebreaks }}</div>
+  {% elif user.is_staff %}
+    <p class="notice">Your bio is empty. <a href="{% url 'admin:hub_profile_changelist' %}">Add it in the admin.</a></p>
+  {% endif %}
+
+  <ul class="artist-actions">
+    {% if profile.website %}<li><a class="pill pill-solid" href="{{ profile.website }}" rel="noopener" target="_blank">Website</a></li>{% endif %}
+    {% if github_username %}<li><a class="pill" href="https://github.com/{{ github_username }}" rel="noopener" target="_blank">GitHub</a></li>{% endif %}
+    {% if profile.email %}<li><a class="pill" href="mailto:{{ profile.email }}">Email</a></li>{% endif %}
+  </ul>
+
+  {% if projects %}
+    <section class="artist-section about-section">
+      <h2>Projects</h2>
+      <ul class="project-list">
+        {% for project in projects %}
+          <li class="panel">
+            <h3>{{ project.title }}</h3>
+            {% if project.description %}<p>{{ project.description }}</p>{% endif %}
+            {% if project.tech_list %}<ul class="chips chips-quiet">{% for item in project.tech_list %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
+            <p class="project-links">
+              {% if project.url %}<a href="{{ project.url }}" rel="noopener" target="_blank">Live</a>{% endif %}
+              {% if project.repo_url %}<a href="{{ project.repo_url }}" rel="noopener" target="_blank">Code</a>{% endif %}
+            </p>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  {% if repositories %}
+    <section class="artist-section about-section">
+      <h2>Recently on GitHub</h2>
+      <ul class="project-list">
+        {% for repo in repositories %}
+          <li class="panel">
+            <h3><a href="{{ repo.html_url }}" rel="noopener" target="_blank">{{ repo.name }}</a></h3>
+            {% if repo.description %}<p>{{ repo.description }}</p>{% endif %}
+            {% if repo.language %}<span class="meta">{{ repo.language }}</span>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+{% endblock %}

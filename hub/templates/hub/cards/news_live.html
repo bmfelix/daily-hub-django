@@ -1,0 +1,9 @@
+{% if error %}
+  <p>{{ error }}</p>
+{% else %}
+  <ol class="card-mini-list">
+    {% for story in stories|slice:":3" %}
+      <li><span class="number" aria-hidden="true">{{ forloop.counter|stringformat:"02d" }}</span><a href="{{ story.url }}" rel="noopener" target="_blank" style="color: inherit; text-decoration: none">{{ story.title }}</a></li>
+    {% endfor %}
+  </ol>
+{% endif %}

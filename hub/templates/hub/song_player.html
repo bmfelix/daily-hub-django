@@ -1,0 +1,7 @@
+{% if song.has_preview %}{% include "hub/preview_button.html" %}{% endif %}
+<span class="song-links meta">
+  {% if song.apple_url %}<a href="{{ song.apple_url }}" rel="noopener" target="_blank">Apple Music</a>{% endif %}
+  {% if song.deezer_url %}<a href="{{ song.deezer_url }}" rel="noopener" target="_blank">Deezer</a>{% endif %}
+  <a href="{{ song.spotify_url }}" rel="noopener" target="_blank">Spotify</a>
+  <a href="{{ song.youtube_music_url }}" rel="noopener" target="_blank">YouTube Music</a>
+</span>
