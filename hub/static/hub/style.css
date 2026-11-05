@@ -505,3 +505,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 /* Choosing between several Spotify playlists */
 .playlist-buttons { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
 .playlist-buttons .pill { padding: 4px 13px; font-family: var(--mono); font-size: 0.72rem; cursor: pointer; }
+
+/* Links on homepage cards read as text until hovered */
+.card-mini-list a { color: inherit; text-decoration: none; }
+.card-mini-list a:hover { color: var(--accent); }

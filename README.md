@@ -14,23 +14,30 @@ This is one of three builds of the same app (Django, Next.js, Laravel), so the f
 | Concerts | `ConcertsModule` | [Ticketmaster Discovery API](https://developer.ticketmaster.com) (free key) |
 | Notes    | `NotesModule`    | Postgres (`Note` model)                       |
 | Radio    | `RadioModule`    | [iHeartRadio](https://www.iheart.com) song history (WEBN) and [Triton Digital](https://www.tritondigital.com) now-playing feed (WKRQ), no keys |
+| Charts   | `ChartsModule`   | Postgres (`Play` model) |
+| Agenda   | `AgendaModule`   | Google or Apple calendar links |
+| Listening | `ListeningModule` | [Spotify Web API](https://developer.spotify.com/documentation/web-api) (your own app) |
+| About    | `AboutModule`    | `Profile` and `Project` models, [GitHub API](https://docs.github.com/rest) (no key) |
+| How it's built | `BuiltModule` | Written by hand, linked from the footer |
 
-Modules can also give the homepage a live card instead of their summary. The Radio card shows the song playing now on each station. WEBN's newest song can appear about a minute after it starts, so its card may briefly say "Last played".
+Modules can also give the homepage a live card instead of their summary. Each station has its own card showing the song on air, with **Listen live** and a song preview. WEBN's newest song can appear about a minute after it starts, so its card may briefly say "Last played".
 
 ## How it is built
 
 - `hub/modules/base.py` defines `HubModule`, a class-based view. Each module subclasses it and returns its page data from `load()`.
 - API modules keep their HTTP calls in a small client class (for example `OpenMeteoClient`). Tests swap that class for a fake, so they run without the internet.
 - `hub/modules/__init__.py` holds the `MODULES` list. The menu, the homepage cards, and the URLs are all built from this list. To add a page, write a module class and a template, then add the class to the list.
-- The menu collapses into a "Menu" button below 640px wide.
+- The menu collapses into a "Menu" button below 1040px wide.
 
 ## Live updates
 
-The Radio card on the homepage updates without a reload:
+The station cards on the homepage update without a reload:
 
 1. The **listener** container (`python manage.py listen_radio`) asks both stations for their song every 15 seconds. The feeds cannot be subscribed to, so it polls.
-2. When a song changes (or the current song ends), it renders the card and sends it to the `radio` group through **Django Channels**, with **Redis** carrying the message between containers.
-3. Each open homepage holds a WebSocket to `/ws/radio/` (`hub/consumers.py`), receives the new card, and swaps it in (`hub/static/hub/live.js`).
+2. When a song changes (or the current song ends), it renders the cards and sends them to the `radio` group through **Django Channels**, with **Redis** carrying the message between containers.
+3. Each open homepage holds a WebSocket to `/ws/radio/` (`hub/consumers.py`), receives the new cards, and swaps them in (`hub/static/hub/live.js`).
+
+Cards that need an outside service, such as weather and concerts, load after the page opens, so a slow service never holds it up. A module opts in with `live_card = True`, and `?card=1` returns just its card (`hub/static/hub/cards.js`).
 
 The web container runs **Uvicorn** (an ASGI server) so it can serve both pages and WebSockets.
 
@@ -62,7 +69,7 @@ The top homepage card shows a playlist player and what you are playing or last p
 - **Listening:** this needs Spotify Premium, because Spotify requires it of the owner of a developer app.
   1. Create an app at [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard) using the Web API, with the redirect URI `http://127.0.0.1:8001/spotify/callback/`. Spotify does not accept `localhost` here.
   2. Put its client ID and secret in `.env` as `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET`, then run `docker compose up -d`.
-  3. Log in to the site and click **Connect Spotify** on the homepage.
+  3. Log in at `/admin/`, then click **Connect Spotify** on the homepage.
 
 The login renews itself. To disconnect, delete the Spotify account entry in the admin. Anyone who opens the site can see what you are playing.
 
@@ -70,7 +77,7 @@ The login renews itself. To disconnect, delete the Spotify account entry in the 
 
 - **Charts** counts every play the listener hears, per station and per week, in the `Play` model.
 - **Concerts** lists Cincinnati, Dayton, and Columbus shows. Set `TICKETMASTER_API_KEY` in `.env`.
-- **Agenda** is private to the logged-in owner. Make an Apple calendar public, copy its address from Get Info, and put it in `CALENDAR_URLS` in `.env`. Separate several with commas. Anyone with one of those links can read that calendar, so keep them private.
+- **Agenda** reads calendars from `CALENDAR_URLS`. It needs a login by default. With `DJANGO_REQUIRE_LOGIN=0`, anyone who can reach the site can read your events.
 - **Listening** shows top Spotify artists and tracks once Spotify is connected.
 - **About** comes from `Profile` and `Project` in the admin, plus recent public GitHub work (`GITHUB_USERNAME`).
 - **How it's built** compares the three builds and is linked from the footer.
@@ -83,17 +90,36 @@ Five wrong passwords lock a username for an hour. To unlock sooner: `docker comp
 
 ## Admin
 
-Log in from the menu to change things. Visitors can read every page, but only logged-in staff can change to-dos and notes.
+By default, visitors can read to-dos and notes, and only logged-in staff can change them or see the agenda.
 
-Set `DJANGO_REQUIRE_LOGIN=0` in `.env` to open to-dos, notes, and the agenda to anyone who can reach the site. The admin always needs a login.
+Set `DJANGO_REQUIRE_LOGIN=0` in `.env` to open to-dos, notes, and the agenda to anyone who can reach the site, and to remove the login and admin links from the menu. The admin still needs a password: go to `/admin/` directly.
 
 Create your login once: `docker compose exec web python manage.py createsuperuser`.
 
-`/admin/` has full create, edit, and delete for tasks, notes, artists, radio names, and songs:
+`/admin/` has full create, edit, and delete for tasks, notes, artists, radio names, songs, plays, and the About page:
 
 - **Artists:** add one from just a MusicBrainz ID. Tick "keep my edits" so the 30-day refresh leaves your changes alone. A deleted artist comes back if the radio plays them again.
 - **Radio names:** filter for empty artists to see names with no match, and pick the right artist to fix one.
 - **Songs:** tick "keep my edits" the same way, or use the "Look up previews again" action.
+
+## Keys and links
+
+Everything here is optional. A feature without its setting explains itself on the page.
+
+| Setting | Used for | Where to get it |
+|---------|----------|-----------------|
+| `SPOTIFY_PLAYLIST_URL` | The Spotify player on the homepage. Separate several with commas. | The share link of a public playlist |
+| `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` | What is playing, and the Listening page | [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard). The app owner needs Spotify Premium. |
+| `SPOTIFY_REDIRECT_URI` | Where Spotify returns after you connect | Add the same address to your Spotify app. Spotify does not accept `localhost`. |
+| `TICKETMASTER_API_KEY` | Concerts | [developer.ticketmaster.com](https://developer.ticketmaster.com/) (the Consumer Key) |
+| `CALENDAR_URLS` | Agenda. Separate several with commas. | Google: Settings > your calendar > Integrate calendar > **Secret address in iCal format**. Apple: turn on **Public Calendar**, then copy its share link. |
+| `GITHUB_USERNAME` | Recent work on the About page | Your GitHub username |
+
+Treat calendar links like passwords: anyone who has one can read that calendar.
+
+## Design
+
+All three builds share one look: a dark page with stage lights sweeping behind see-through cards, drifting music notes, and an equalizer under the current menu item. The homepage cards are numbered like the sides of an album. Fonts are Bricolage Grotesque, Instrument Sans, and Martian Mono from Google Fonts. Animations stop for visitors who ask their device to reduce motion.
 
 ## Run with Docker
 
@@ -111,4 +137,4 @@ docker compose exec web python manage.py test
 
 ## Stack
 
-Django 6.1 · Django Channels 4.3 · Python 3.13 · Postgres 17 · Redis 8 · Uvicorn · WhiteNoise · Docker Compose
+Django 6.1 · Django Channels 4.3 · django-axes · Python 3.13 · Postgres 17 · Redis 8 · Uvicorn · WhiteNoise · iCalendar · Docker Compose
