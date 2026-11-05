@@ -7,7 +7,7 @@ import requests
 from django.contrib.auth.models import User
 from django.core import signing
 from django.core.cache import cache
-from django.test import Client, TestCase, override_settings
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -331,39 +331,15 @@ class LoginTests(TestCase):
     def setUp(self):
         self.editor = User.objects.create_user("editor", password="secret", is_staff=True)
 
-    def test_visitors_can_read_but_not_see_the_forms(self):
-        Task.objects.create(title="Buy milk")
-        response = self.client.get(reverse("hub:todo"))
-        self.assertContains(response, "Buy milk")
-        self.assertNotContains(response, 'name="action"')
-        self.assertContains(response, "Log in")
-
-    def test_visitors_can_read_a_note(self):
-        note = Note.objects.create(title="Idea", body="Some text")
-        response = self.client.get(reverse("hub:notes"), {"note": note.pk})
-        self.assertContains(response, "Some text")
-        self.assertNotContains(response, "<textarea")
-
     def test_visitors_cannot_change_tasks(self):
         response = self.client.post(reverse("hub:todo"), {"action": "add", "title": "Hack"})
         self.assertEqual(response.status_code, 302)
         self.assertIn(reverse("admin:login"), response["Location"])
         self.assertFalse(Task.objects.exists())
 
-    def test_visitors_cannot_change_notes(self):
-        note = Note.objects.create(title="Mine")
-        self.client.post(reverse("hub:notes"), {"action": "delete", "note": note.pk})
-        self.assertTrue(Note.objects.filter(pk=note.pk).exists())
-
-    def test_non_staff_accounts_cannot_change_anything(self):
-        self.client.force_login(User.objects.create_user("visitor", password="secret"))
-        self.client.post(reverse("hub:todo"), {"action": "add", "title": "Hack"})
-        self.assertFalse(Task.objects.exists())
-
-    def test_editors_see_the_forms_and_the_admin_link(self):
+    def test_editors_see_the_admin_link(self):
         self.client.force_login(self.editor)
         response = self.client.get(reverse("hub:todo"))
-        self.assertContains(response, 'name="action"')
         self.assertContains(response, reverse("admin:index"))
         self.assertContains(response, "Log out")
 
@@ -1056,15 +1032,11 @@ class LoginLimitTests(TestCase):
 
 @override_settings(REQUIRE_LOGIN=False, CALENDAR_URLS=[])
 class NoLoginTests(TestCase):
-    def test_anyone_can_change_tasks(self):
-        self.client.post(reverse("hub:todo"), {"action": "add", "title": "Open"})
-        self.assertTrue(Task.objects.filter(title="Open").exists())
-        self.assertContains(self.client.get(reverse("hub:todo")), 'name="action"')
-
-    def test_anyone_can_change_notes(self):
-        self.client.post(reverse("hub:notes"), {"action": "save", "title": "Open", "body": ""})
-        self.assertTrue(Note.objects.filter(title="Open").exists())
-        self.assertContains(self.client.get(reverse("hub:notes")), "<textarea")
+    def test_pages_still_cannot_change_anything(self):
+        self.assertEqual(self.client.post(reverse("hub:todo"), {"action": "add", "title": "Open"}).status_code, 405)
+        self.assertEqual(self.client.post(reverse("hub:notes"), {"title": "Open"}).status_code, 405)
+        self.assertFalse(Task.objects.exists())
+        self.assertFalse(Note.objects.exists())
 
     def test_anyone_can_see_the_agenda(self):
         self.assertEqual(self.client.get(reverse("hub:agenda")).status_code, 200)
@@ -1076,12 +1048,16 @@ class NoLoginTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn(reverse("admin:login"), response["Location"])
 
-    def test_forms_are_still_protected_from_other_sites(self):
-        client = Client(enforce_csrf_checks=True)
-        self.assertEqual(client.post(reverse("hub:todo"), {"action": "add", "title": "Forged"}).status_code, 403)
-        self.assertFalse(Task.objects.exists())
-
     def test_the_menu_has_no_admin_or_login_link(self):
         with mock.patch.object(RadioModule, "stations", []):
             response = self.client.get(reverse("hub:home"))
         self.assertNotContains(response, reverse("admin:index"))
+
+
+class BuiltSiteLinkTests(TestCase):
+    @override_settings(SITE_URLS={"django": "https://one.test", "nextjs": "https://two.test", "laravel": ""})
+    def test_headings_link_to_each_live_site(self):
+        response = self.client.get(reverse("hub:built"))
+        self.assertContains(response, '<a href="https://one.test">Django</a>')
+        self.assertContains(response, '<a href="https://two.test">Next.js</a>')
+        self.assertContains(response, '<th scope="col">Laravel</th>')

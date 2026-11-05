@@ -27,7 +27,7 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-only-insecure-key")
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
-# 0 lets anyone change to-dos and notes and read the agenda, with no login. The admin always needs one.
+# 0 lets anyone read the agenda with no login, and hides the login link. The admin always needs one.
 REQUIRE_LOGIN = os.environ.get("DJANGO_REQUIRE_LOGIN", "1") == "1"
 
 # Only send login cookies over HTTPS. Turn on once the site is used through an HTTPS address.
@@ -46,6 +46,12 @@ TICKETMASTER_API_KEY = os.environ.get("TICKETMASTER_API_KEY", "")
 # Calendar addresses for the Agenda page, separated by commas.
 CALENDAR_URLS = [url for url in os.environ.get("CALENDAR_URLS", "").split(",") if url.strip()]
 GITHUB_USERNAME = os.environ.get("GITHUB_USERNAME", "bmfelix")
+# Where each build runs, for the How it's built page. Empty leaves a heading as plain text.
+SITE_URLS = {
+    "django": os.environ.get("DJANGO_SITE_URL", ""),
+    "nextjs": os.environ.get("NEXTJS_SITE_URL", ""),
+    "laravel": os.environ.get("LARAVEL_SITE_URL", ""),
+}
 
 
 # Application definition

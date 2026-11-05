@@ -90,9 +90,9 @@ Five wrong passwords lock a username for an hour. To unlock sooner: `docker comp
 
 ## Admin
 
-By default, visitors can read to-dos and notes, and only logged-in staff can change them or see the agenda.
+To-dos and notes are read-only on the site: nobody can add, change, or delete them from those pages. Their data is meant to arrive from an outside API. Until then, they can be edited in the admin.
 
-Set `DJANGO_REQUIRE_LOGIN=0` in `.env` to open to-dos, notes, and the agenda to anyone who can reach the site, and to remove the login and admin links from the menu. The admin still needs a password: go to `/admin/` directly.
+The agenda needs a login by default. Set `DJANGO_REQUIRE_LOGIN=0` in `.env` to open it to anyone who can reach the site, and to remove the login and admin links from the menu. The admin still needs a password: go to `/admin/` directly.
 
 Create your login once: `docker compose exec web python manage.py createsuperuser`.
 
@@ -116,6 +116,8 @@ Everything here is optional. A feature without its setting explains itself on th
 | `GITHUB_USERNAME` | Recent work on the About page | Your GitHub username |
 
 Treat calendar links like passwords: anyone who has one can read that calendar.
+
+`DJANGO_SITE_URL`, `NEXTJS_SITE_URL`, and `LARAVEL_SITE_URL` turn the headings on the How it's built page into links to each live site. A heading stays plain text if its address is empty.
 
 ## Design
 

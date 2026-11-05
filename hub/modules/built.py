@@ -1,3 +1,5 @@
+from django.conf import settings
+
 from .base import HubModule
 
 
@@ -7,3 +9,6 @@ class BuiltModule(HubModule):
     summary = "One app, built three times to compare the frameworks."
     in_menu = False
     on_home = False
+
+    def load(self):
+        return {"sites": settings.SITE_URLS}
