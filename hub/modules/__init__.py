@@ -1,3 +1,5 @@
+from django.conf import settings
+
 from .about import AboutModule
 from .agenda import AgendaModule
 from .built import BuiltModule
@@ -28,4 +30,4 @@ MODULES = [
 
 def visible_modules(user):
     """The modules this person may see."""
-    return [module for module in MODULES if not module.staff_only or user.is_staff]
+    return [module for module in MODULES if not module.staff_only or user.is_staff or not settings.REQUIRE_LOGIN]

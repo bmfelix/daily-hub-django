@@ -7,7 +7,7 @@ import requests
 from django.contrib.auth.models import User
 from django.core import signing
 from django.core.cache import cache
-from django.test import TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -1052,3 +1052,36 @@ class LoginLimitTests(TestCase):
         for _ in range(3):
             self.attempt("wrong")
         self.assertEqual(self.attempt("right-password").status_code, 302)
+
+
+@override_settings(REQUIRE_LOGIN=False, CALENDAR_URLS=[])
+class NoLoginTests(TestCase):
+    def test_anyone_can_change_tasks(self):
+        self.client.post(reverse("hub:todo"), {"action": "add", "title": "Open"})
+        self.assertTrue(Task.objects.filter(title="Open").exists())
+        self.assertContains(self.client.get(reverse("hub:todo")), 'name="action"')
+
+    def test_anyone_can_change_notes(self):
+        self.client.post(reverse("hub:notes"), {"action": "save", "title": "Open", "body": ""})
+        self.assertTrue(Note.objects.filter(title="Open").exists())
+        self.assertContains(self.client.get(reverse("hub:notes")), "<textarea")
+
+    def test_anyone_can_see_the_agenda(self):
+        self.assertEqual(self.client.get(reverse("hub:agenda")).status_code, 200)
+        with mock.patch.object(RadioModule, "stations", []):
+            self.assertContains(self.client.get(reverse("hub:home")), reverse("hub:agenda"))
+
+    def test_the_admin_still_needs_a_login(self):
+        response = self.client.get(reverse("admin:index"))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("admin:login"), response["Location"])
+
+    def test_forms_are_still_protected_from_other_sites(self):
+        client = Client(enforce_csrf_checks=True)
+        self.assertEqual(client.post(reverse("hub:todo"), {"action": "add", "title": "Forged"}).status_code, 403)
+        self.assertFalse(Task.objects.exists())
+
+    def test_the_menu_has_no_admin_or_login_link(self):
+        with mock.patch.object(RadioModule, "stations", []):
+            response = self.client.get(reverse("hub:home"))
+        self.assertNotContains(response, reverse("admin:index"))

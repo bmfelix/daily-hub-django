@@ -3,7 +3,7 @@
 {% block title %}{{ module.title }}{% endblock %}
 
 {% block content %}
-  <p class="kicker">Tour dates · only you can see this</p>
+  <p class="kicker">Tour dates{% if require_login %} · only you can see this{% endif %}</p>
   <h1>{{ module.title }}</h1>
 
   {% if failed %}<p class="notice">{{ failed }} calendar{{ failed|pluralize }} could not be read.</p>{% endif %}

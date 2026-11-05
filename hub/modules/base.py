@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth.views import redirect_to_login
 from django.urls import reverse
 from django.views.generic import TemplateView
@@ -17,7 +18,8 @@ class HubModule(TemplateView):
 
     def dispatch(self, request, *args, **kwargs):
         """Anyone can read a page, but only someone logged in can change anything."""
-        if (request.method == "POST" or self.staff_only) and not request.user.is_staff:
+        needs_login = request.method == "POST" or self.staff_only
+        if needs_login and settings.REQUIRE_LOGIN and not request.user.is_staff:
             return redirect_to_login(request.get_full_path(), reverse("admin:login"))
         return super().dispatch(request, *args, **kwargs)
 

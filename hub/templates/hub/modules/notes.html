@@ -8,7 +8,7 @@
 
   <div class="split">
     <aside>
-      {% if user.is_staff %}
+      {% if can_edit %}
         <p><a href="{% url 'hub:notes' %}">+ New note</a></p>
       {% else %}
         <p class="lead"><a href="{% url 'admin:login' %}?next={{ request.path|urlencode }}">Log in</a> to change notes.</p>
@@ -26,7 +26,7 @@
     </aside>
 
     <section class="panel">
-      {% if user.is_staff %}
+      {% if can_edit %}
         <h2>{% if note %}Edit note{% else %}New note{% endif %}</h2>
         <form class="stack-form" method="post">
           {% csrf_token %}

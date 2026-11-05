@@ -27,6 +27,9 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-only-insecure-key")
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+# 0 lets anyone change to-dos and notes and read the agenda, with no login. The admin always needs one.
+REQUIRE_LOGIN = os.environ.get("DJANGO_REQUIRE_LOGIN", "1") == "1"
+
 # Only send login cookies over HTTPS. Turn on once the site is used through an HTTPS address.
 SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = os.environ.get("DJANGO_SECURE_COOKIES", "0") == "1"
 

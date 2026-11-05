@@ -85,6 +85,8 @@ Five wrong passwords lock a username for an hour. To unlock sooner: `docker comp
 
 Log in from the menu to change things. Visitors can read every page, but only logged-in staff can change to-dos and notes.
 
+Set `DJANGO_REQUIRE_LOGIN=0` in `.env` to open to-dos, notes, and the agenda to anyone who can reach the site. The admin always needs a login.
+
 Create your login once: `docker compose exec web python manage.py createsuperuser`.
 
 `/admin/` has full create, edit, and delete for tasks, notes, artists, radio names, and songs:
