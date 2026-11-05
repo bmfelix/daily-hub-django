@@ -18,11 +18,14 @@ class RadioListener:
 
     @staticmethod
     def signature(card):
-        """What a viewer can see change: each station's song and whether it is still playing."""
+        """What a viewer can see change: each song, if it is still playing, and if it has a preview yet."""
         result = []
         for item in card["stations"]:
             track = (item.get("tracks") or [None])[0]
-            result.append((item["station"].name, track and (track["title"], track["artist"], track["playing"])))
+            result.append((
+                item["station"].name,
+                track and (track["title"], track["artist"], track["playing"], bool(track.get("song"))),
+            ))
         return tuple(result)
 
     def check(self):

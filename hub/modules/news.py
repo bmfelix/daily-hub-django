@@ -23,6 +23,7 @@ class NewsModule(HubModule):
     title = "News"
     summary = "Top headlines from the Hacker News front page."
 
+    live_card = True
     client_class = HackerNewsClient
 
     def load(self):

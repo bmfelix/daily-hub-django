@@ -27,19 +27,47 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-only-insecure-key")
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+# Only send login cookies over HTTPS. Turn on once the site is used through an HTTPS address.
+SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = os.environ.get("DJANGO_SECURE_COOKIES", "0") == "1"
+
+# Addresses that reach the site through an HTTPS proxy, such as Tailscale Serve.
+CSRF_TRUSTED_ORIGINS = [origin for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if origin]
+
+# Spotify on the homepage. All optional. Spotify does not accept "localhost" as a redirect address.
+SPOTIFY_CLIENT_ID = os.environ.get("SPOTIFY_CLIENT_ID", "")
+SPOTIFY_CLIENT_SECRET = os.environ.get("SPOTIFY_CLIENT_SECRET", "")
+SPOTIFY_REDIRECT_URI = os.environ.get("SPOTIFY_REDIRECT_URI", "http://127.0.0.1:8001/spotify/callback/")
+SPOTIFY_PLAYLIST_URL = os.environ.get("SPOTIFY_PLAYLIST_URL", "")
+
+TICKETMASTER_API_KEY = os.environ.get("TICKETMASTER_API_KEY", "")
+# Calendar addresses for the Agenda page, separated by commas.
+CALENDAR_URLS = [url for url in os.environ.get("CALENDAR_URLS", "").split(",") if url.strip()]
+GITHUB_USERNAME = os.environ.get("GITHUB_USERNAME", "bmfelix")
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'hub',  # first, so its admin template restyles the admin
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'hub',
+    'axes',
 ]
+
+# Too many wrong passwords for one username locks that username for an hour.
+# It counts by username because every visitor reaches the site through the same proxy.
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = 1  # hours
+AXES_LOCKOUT_PARAMETERS = ["username"]
+AXES_RESET_ON_SUCCESS = True
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -50,6 +78,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'axes.middleware.AxesMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -136,7 +165,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/New_York'
 
 USE_I18N = True
 

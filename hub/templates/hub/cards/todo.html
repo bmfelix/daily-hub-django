@@ -1,0 +1,8 @@
+{% if card.open_tasks %}
+  <ul class="card-mini-list">
+    {% for task in card.open_tasks %}<li><span class="tick" aria-hidden="true">☐</span><span>{{ task.title }}</span></li>{% endfor %}
+  </ul>
+  {% if card.open_count > card.open_tasks|length %}<p class="meta">{{ card.open_count }} open in all</p>{% endif %}
+{% else %}
+  <p>Nothing left to do.</p>
+{% endif %}

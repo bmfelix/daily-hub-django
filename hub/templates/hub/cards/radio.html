@@ -1,18 +1,28 @@
-<ul class="now-playing-list" data-live-card="radio">
+<div class="station-cards" data-live-card="radio">
   {% for item in card.stations %}
-    <li class="now-playing">
-      {% with track=item.tracks.0 %}
-        {% if track.image %}<img src="{{ track.image }}" alt="" width="48" height="48">{% endif %}
-        <div>
-          <span class="meta">{{ item.station.name }} · {% if track %}{% if track.playing %}Now playing{% else %}Last played{% endif %}{% else %}Unavailable{% endif %}</span>
-          {% if track %}
-            <strong>{{ track.title }}</strong>
-            <a class="artist-link" href="{% url 'hub:artist_lookup' %}?name={{ track.artist|urlencode }}">{{ track.artist }}</a>
-          {% else %}
-            <span>{{ item.error|default:"No songs yet." }}</span>
-          {% endif %}
-        </div>
-      {% endwith %}
-    </li>
+    <div class="card card-station">
+      <h2><a class="card-link" href="{% url 'hub:radio' %}">{{ item.station.name }}</a><span class="meta">{{ item.station.frequency }}</span></h2>
+      <div class="now-playing">
+        {% with track=item.tracks.0 %}
+          <span class="art">{% if track.image %}<img src="{{ track.image }}" alt="" width="150" height="150">{% elif track.song.artwork_url %}<img src="{{ track.song.artwork_url }}" alt="" width="150" height="150">{% endif %}</span>
+          <div>
+            <span class="on-air{% if track.playing %} is-live{% endif %}">{% if track %}{% if track.playing %}On air{% else %}Last played{% endif %}{% else %}Unavailable{% endif %}</span>
+            {% if track %}
+              <strong>{{ track.title }}</strong>
+              <a class="artist-link" href="{% url 'hub:artist_lookup' %}?name={{ track.artist|urlencode }}">{{ track.artist }}</a>
+            {% else %}
+              <span>{{ item.error|default:"No songs yet." }}</span>
+            {% endif %}
+            <div class="card-actions">
+              {% include "hub/live_button.html" with station=item.station %}
+              {% if track.song.has_preview %}
+                {% include "hub/preview_button.html" with song=track.song %}
+                <span class="meta">Song preview</span>
+              {% endif %}
+            </div>
+          </div>
+        {% endwith %}
+      </div>
+    </div>
   {% endfor %}
-</ul>
+</div>

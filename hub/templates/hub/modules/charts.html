@@ -1,0 +1,59 @@
+{% extends "hub/base.html" %}
+
+{% block title %}{{ module.title }}{% endblock %}
+
+{% block content %}
+  <p class="kicker">The weekly countdown</p>
+  <h1>{{ module.title }}</h1>
+
+  <nav class="week-nav" aria-label="Week">
+    {% if previous_week %}<a class="pill" href="?week={{ previous_week|date:'Y-m-d' }}">← Earlier</a>{% endif %}
+    <strong>{{ monday|date:"M j" }} – {{ sunday|date:"M j" }}</strong>
+    {% if next_week %}<a class="pill" href="?week={{ next_week|date:'Y-m-d' }}">Later →</a>{% endif %}
+    <span class="meta">{{ total }} play{{ total|pluralize }} counted</span>
+  </nav>
+
+  {% for station in stations %}
+    <section class="chart-station">
+      <h2>{{ station.name }}</h2>
+      <div class="chart-columns">
+        <div>
+          <h3>Top songs</h3>
+          <ol class="chart">
+            {% for row in station.songs %}
+              <li>
+                <span class="chart-rank">{{ forloop.counter }}</span>
+                <span class="chart-row">
+                  <strong>{{ row.title }}</strong>
+                  <a class="artist-link" href="{% url 'hub:artist_lookup' %}?name={{ row.artist|urlencode }}">{{ row.artist }}</a>
+                  <span class="chart-bar" aria-hidden="true"><span style="width: {{ row.bar }}%"></span></span>
+                </span>
+                <span class="meta">{{ row.plays }}</span>
+                {% if row.song.has_preview %}{% include "hub/preview_button.html" with song=row.song %}{% endif %}
+              </li>
+            {% endfor %}
+          </ol>
+        </div>
+        <div>
+          <h3>Top artists</h3>
+          <ol class="chart">
+            {% for row in station.artists %}
+              <li>
+                <span class="chart-rank">{{ forloop.counter }}</span>
+                <span class="chart-row">
+                  <a class="artist-link" href="{% url 'hub:artist_lookup' %}?name={{ row.artist|urlencode }}"><strong>{{ row.artist }}</strong></a>
+                  <span class="chart-bar" aria-hidden="true"><span style="width: {{ row.bar }}%"></span></span>
+                </span>
+                <span class="meta">{{ row.plays }}</span>
+              </li>
+            {% endfor %}
+          </ol>
+        </div>
+      </div>
+    </section>
+  {% empty %}
+    <p class="notice">No plays saved for this week yet. Songs are counted as the listener hears them.</p>
+  {% endfor %}
+
+  <p class="source">Counted by Daily Hub from each station's song feed, from the day tracking began.</p>
+{% endblock %}

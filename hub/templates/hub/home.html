@@ -4,17 +4,45 @@
 {% block title %}Home{% endblock %}
 
 {% block content %}
-  <h1>Your day at a glance</h1>
-  <p class="lead">Pick a module from the menu or below.</p>
+  <header class="home-intro">
+    <p class="kicker">{% now "l, F j" %}</p>
+    <h1>Your day, <em>on repeat.</em></h1>
+  </header>
 
-  <div class="cards">
-    {% for card in cards %}
-      <div class="card">
-        <h2><a class="card-link" href="{% url 'hub:'|add:card.module.slug %}">{{ card.module.title }}</a></h2>
-        {% include card.template %}
+  <div class="board">
+    <div class="card card-spotify">
+      <h2>Spotify</h2>
+      <div class="spotify-layout{% if not playlists %} is-single{% endif %}">
+        <div class="spotify-listening" data-card-url="{% url 'hub:spotify_card' %}" data-card-every="30">
+          <p>Checking Spotify…</p>
+        </div>
+        {% if playlists %}
+          <div class="spotify-player">
+            {% if playlists|length > 1 %}
+              <div class="playlist-buttons" role="group" aria-label="Choose a playlist">
+                {% for playlist in playlists %}
+                  <button class="pill{% if forloop.first %} is-chosen{% endif %}" type="button" aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}" aria-label="Playlist {{ forloop.counter }}" data-playlist="{{ playlist }}">{{ forloop.counter }}</button>
+                {% endfor %}
+              </div>
+            {% endif %}
+            <iframe class="spotify-playlist" title="Spotify playlist" src="{{ playlists.0 }}" height="352" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
+          </div>
+        {% endif %}
       </div>
+    </div>
+
+    {% for card in cards %}
+      {% if card.module.slug == "radio" %}
+        {% include card.template %}
+      {% else %}
+        <div class="card card-{{ card.module.slug }}">
+          <h2><a class="card-link" href="{% url 'hub:'|add:card.module.slug %}">{{ card.module.title }}</a></h2>
+          {% include card.template %}
+        </div>
+      {% endif %}
     {% endfor %}
   </div>
 
   <script src="{% static 'hub/live.js' %}" defer></script>
+  <script src="{% static 'hub/cards.js' %}" defer></script>
 {% endblock %}

@@ -1,0 +1,11 @@
+{% if error %}
+  <p>{{ error }}</p>
+{% elif concerts %}
+  <ul class="card-mini-list">
+    {% for show in concerts|slice:":4" %}
+      <li><span class="number">{{ show.date|date:"M j" }}</span><a href="{{ show.url }}" rel="noopener" target="_blank">{{ show.name }}<span class="meta"> · {{ show.city }}</span></a></li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>No shows listed right now.</p>
+{% endif %}

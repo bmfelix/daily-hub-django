@@ -15,6 +15,12 @@ class TodoModule(HubModule):
     slug = "todo"
     title = "To-do"
     summary = "A simple task list saved in the database."
+    card_template = "hub/cards/todo.html"
+
+    @classmethod
+    def card(cls):
+        tasks = Task.objects.filter(done=False)
+        return {"open_tasks": tasks[:4], "open_count": tasks.count()}
 
     def load(self):
         return {"tasks": Task.objects.all(), "form": getattr(self, "form", TaskForm())}

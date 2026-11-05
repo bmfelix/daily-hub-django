@@ -1,0 +1,7 @@
+{% if card.latest %}
+  <strong>{{ card.latest.title }}</strong>
+  <p>{{ card.latest.body|truncatechars:140 }}</p>
+  <p class="meta">Updated {{ card.latest.updated_at|date:"M j" }}</p>
+{% else %}
+  <p>No notes yet.</p>
+{% endif %}

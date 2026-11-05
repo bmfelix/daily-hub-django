@@ -3,7 +3,6 @@
 import re
 import threading
 import time
-import unicodedata
 from datetime import timedelta
 from urllib.parse import urlparse
 
@@ -11,6 +10,9 @@ import requests
 from django.utils import timezone
 
 from .models import Artist, ArtistName
+from .music import MusicClient, album_key
+from .names import name_candidates, normalize
+from .wikipedia import WikipediaClient
 
 API_URL = "https://musicbrainz.org/ws/2"
 # MusicBrainz asks every app to identify itself with a name and a contact address.
@@ -60,7 +62,9 @@ class MusicBrainzClient:
                 MusicBrainzClient._last_request = time.monotonic()
 
     def search_artists(self, name, limit=5):
-        return self._get("artist/", query=f'artist:"{name}"', limit=limit)["artists"]
+        # "artist" only searches the main name, so "alias" is needed for names like "Matchbox 20".
+        quoted = name.replace("\\", "\\\\").replace('"', '\\"')
+        return self._get("artist/", query=f'artist:"{quoted}" OR alias:"{quoted}"', limit=limit)["artists"]
 
     def artist(self, mbid):
         return self._get(f"artist/{mbid}", inc=ARTIST_INCLUDES)
@@ -76,39 +80,23 @@ class MusicBrainzClient:
         return groups
 
 
-def normalize(name):
-    """Compare names loosely: no accents, case, or punctuation."""
-    name = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
-    return re.sub(r"[^a-z0-9]+", " ", name.lower()).strip()
-
-
-# Separators the stations use between several artists, as in "Tame Impala [+] Jennie".
-SEPARATORS = re.compile(r"\s*(?:\[\+\]|,|&|\bfeat\.?|\bft\.?|\bfeaturing\b|\bwith\b|\bx\b|/)\s*", re.I)
-
-
-def name_candidates(name):
-    """The full name first (for duos like "Simon & Garfunkel"), then the first listed artist."""
-    name = name.strip()
-    first = SEPARATORS.split(name, maxsplit=1)[0].strip()
-    return [name] if first in ("", name) else [name, first]
-
-
 class ArtistLibrary:
     """Finds artists by the name the radio uses. Checks the database before MusicBrainz."""
 
-    def __init__(self, client=None):
+    def __init__(self, client=None, wikipedia=None, music=None):
         self.client = client or MusicBrainzClient()
+        self.wikipedia = wikipedia or WikipediaClient()
+        self.music = music or MusicClient()
 
     def find(self, name):
         """The saved Artist for this name, fetching it the first time. None if nothing matches."""
         key = name.strip().lower()
         entry = ArtistName.objects.select_related("artist").filter(key=key).first()
         now = timezone.now()
-        if entry:
-            if entry.artist and now - entry.artist.fetched_at < REFRESH_AFTER:
-                return entry.artist
-            if entry.artist is None and now - entry.checked_at < RETRY_UNMATCHED_AFTER:
-                return None
+        if entry and entry.artist:
+            return self.save(str(entry.artist.mbid))  # keeps a match picked by hand in the admin
+        if entry and now - entry.checked_at < RETRY_UNMATCHED_AFTER:
+            return None
 
         mbid = self.match(name)
         artist = self.save(mbid) if mbid else None
@@ -128,17 +116,52 @@ class ArtistLibrary:
         return None
 
     def save(self, mbid):
-        """Fetch and save one artist, unless the saved copy is still fresh."""
+        """Fetch and save one artist, unless the saved copy is fresh or has edits to keep."""
         existing = Artist.objects.filter(mbid=mbid).first()
-        if existing and timezone.now() - existing.fetched_at < REFRESH_AFTER:
+        if existing and existing.locked:
             return existing
+        if existing and timezone.now() - existing.fetched_at < REFRESH_AFTER:
+            if existing.extras_checked_at is None:
+                self.add_extras(existing)
+            return existing
+        artist, _ = Artist.objects.update_or_create(mbid=mbid, defaults=self.fetch(mbid))
+        return artist
+
+    def refresh(self, artist):
+        """Fetch one artist again now, however recently they were saved."""
+        Artist.objects.filter(pk=artist.pk).update(**self.fetch(str(artist.mbid)))
+
+    def fetch(self, mbid):
+        """Everything saved about an artist, from all the services."""
         data = self.client.artist(mbid)
         release_groups = self.client.release_groups(mbid)
-        artist, _ = Artist.objects.update_or_create(
-            mbid=mbid,
-            defaults={"name": data["name"], "data": data, "release_groups": release_groups, "fetched_at": timezone.now()},
-        )
-        return artist
+        return {
+            "name": data["name"], "data": data, "release_groups": release_groups, "fetched_at": timezone.now(),
+            **self.extras(data),
+        }
+
+    def extras(self, data):
+        """Wikipedia text and Apple artwork. If either service fails, they are tried again later."""
+        values = {}
+        try:
+            page = self.wikipedia.find(data) or {}
+            values.update(
+                wikipedia_title=page.get("title", ""),
+                wikipedia_url=page.get("url", ""),
+                wikipedia_summary=page.get("summary", ""),
+                wikipedia_image=page.get("image", ""),
+            )
+            values["apple_albums"] = self.music.apple_albums(data["name"])
+            values["extras_checked_at"] = timezone.now()
+        except requests.RequestException:
+            pass
+        return values
+
+    def add_extras(self, artist):
+        """Fill in the extras for an artist saved before they existed."""
+        for field, value in self.extras(artist.data).items():
+            setattr(artist, field, value)
+        artist.save()
 
 
 # ---- Turning the saved record into what the artist page shows ----
@@ -212,6 +235,14 @@ def merge_person(people, person):
     people.append(person)
 
 
+def wikipedia_section(artist):
+    """The first paragraph to show straight away, and the rest behind "Read more"."""
+    lead, _, rest = artist.wikipedia_summary.strip().partition("\n")
+    if not lead:
+        return None
+    return {"title": artist.wikipedia_title, "url": artist.wikipedia_url, "lead": lead, "rest": rest.strip()}
+
+
 def artist_profile(artist):
     """Everything the artist page shows, grouped into sections."""
     data = artist.data
@@ -246,12 +277,16 @@ def artist_profile(artist):
         group[:] = unique.values()
 
     sections = {label: [] for label in RELEASE_SECTIONS}
+    apple_albums = artist.apple_albums or {}
     for group in artist.release_groups:
+        apple = apple_albums.get(album_key(group["title"])) or {}
         sections[release_section(group)].append({
             "title": group["title"],
             "year": year(group.get("first-release-date")),
             "mbid": group["id"],
             "cover": f"https://coverartarchive.org/release-group/{group['id']}/front-250",
+            "apple_artwork": apple.get("artwork", ""),
+            "apple_url": apple.get("url", ""),
         })
     discography = []
     for label, items in sections.items():
@@ -281,7 +316,9 @@ def artist_profile(artist):
         "genres": genres,
         "tags": tags[:12],
         "aliases": sorted({a["name"] for a in data.get("aliases", []) if a["name"] != data["name"]}),
-        "image": image,
+        "image": image or artist.wikipedia_image,
+        "wikipedia": wikipedia_section(artist),
+        "songs": list(artist.songs.all()) if artist.pk else [],
         "members": sorted(members, key=lambda m: (not m["current"], m["years"])),
         "member_of": member_of,
         "related": related,

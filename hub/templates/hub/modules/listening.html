@@ -1,0 +1,50 @@
+{% extends "hub/base.html" %}
+
+{% block title %}{{ module.title }}{% endblock %}
+
+{% block content %}
+  <p class="kicker">On heavy rotation</p>
+  <h1>{{ module.title }}</h1>
+
+  <nav class="filter-pills" aria-label="Time period">
+    {% for value, label in ranges %}
+      <a class="pill{% if value == chosen %} is-chosen{% endif %}" href="?range={{ value }}">{{ label }}</a>
+    {% endfor %}
+  </nav>
+
+  {% if error %}
+    <p class="notice">{{ error }}</p>
+  {% else %}
+    <section class="artist-section">
+      <h2>Top artists</h2>
+      <ol class="top-artists">
+        {% for artist in artists %}
+          <li>
+            <a href="{{ artist.url }}" rel="noopener" target="_blank">
+              <span class="art">{% if artist.image %}<img src="{{ artist.image }}" alt="" loading="lazy">{% endif %}</span>
+              <strong>{{ forloop.counter }}. {{ artist.name }}</strong>
+              {% if artist.genres %}<span class="meta">{{ artist.genres|join:" · " }}</span>{% endif %}
+            </a>
+          </li>
+        {% endfor %}
+      </ol>
+    </section>
+
+    <section class="artist-section">
+      <h2>Top tracks</h2>
+      <ol class="songs">
+        {% for track in tracks %}
+          <li>
+            <span class="art">{% if track.artwork %}<img src="{{ track.artwork }}" alt="" loading="lazy">{% endif %}</span>
+            <div class="track-text">
+              <strong>{{ forloop.counter }}. {{ track.title }}</strong>
+              <a class="artist-link" href="{{ track.url }}" rel="noopener" target="_blank">{{ track.artist }}</a>
+            </div>
+          </li>
+        {% endfor %}
+      </ol>
+    </section>
+  {% endif %}
+
+  <p class="source">Data: Spotify</p>
+{% endblock %}

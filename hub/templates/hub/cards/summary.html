@@ -1,1 +1,3 @@
-<p>{{ card.module.summary }}</p>
+<div {% if card.module.live_card %}data-card-url="{% url 'hub:'|add:card.module.slug %}?card=1"{% endif %} {% if card.module.slug == "weather" %}data-locate{% endif %}>
+  <p>{{ card.module.summary }}</p>
+</div>
