@@ -18,11 +18,28 @@ class FakeWeatherClient:
     def find_place(self, name):
         if name == "Nowhere":
             return None
-        return {"name": name, "country": "France", "latitude": 48.85, "longitude": 2.35}
+        if name == "Chicago":
+            return {
+                "name": name, "country": "United States", "country_code": "US",
+                "latitude": 41.85, "longitude": -87.65,
+            }
+        return {"name": name, "country": "France", "country_code": "FR", "latitude": 48.85, "longitude": 2.35}
 
-    def forecast(self, latitude, longitude):
+    def place_at(self, latitude, longitude):
+        if latitude == 0:
+            return None
         return {
-            "current": {"temperature_2m": 9.2, "apparent_temperature": 7.0, "wind_speed_10m": 12, "weather_code": 3},
+            "name": "Chicago", "country": "United States", "country_code": "US",
+            "latitude": latitude, "longitude": longitude,
+        }
+
+    def forecast(self, latitude, longitude, imperial=False):
+        temperature, wind = (48.6, 7.5) if imperial else (9.2, 12)
+        return {
+            "current": {
+                "temperature_2m": temperature, "apparent_temperature": 7.0,
+                "wind_speed_10m": wind, "weather_code": 3,
+            },
             "daily": {
                 "time": ["2026-10-24", "2026-10-25"],
                 "weather_code": [0, 61],
@@ -78,8 +95,39 @@ class WeatherTests(TestCase):
         response = self.client.get(reverse("hub:weather"), {"city": "Paris"})
         self.assertContains(response, "Paris, France")
         self.assertContains(response, "9.2°C")
+        self.assertContains(response, "12 km/h")
         self.assertContains(response, "Overcast")
         self.assertContains(response, "Light rain")
+
+    def test_uses_fahrenheit_and_mph_in_the_united_states(self):
+        response = self.client.get(reverse("hub:weather"), {"city": "Chicago"})
+        self.assertContains(response, "48.6°F")
+        self.assertContains(response, "7.5 mph")
+        self.assertNotContains(response, "°C")
+        self.assertNotContains(response, "km/h")
+
+    def test_uses_the_visitors_location(self):
+        response = self.client.get(reverse("hub:weather"), {"lat": "41.85", "lon": "-87.65"})
+        self.assertContains(response, "Chicago, United States")
+        self.assertContains(response, "48.6°F")
+        self.assertNotContains(response, "getCurrentPosition")
+
+    def test_a_searched_city_beats_the_visitors_location(self):
+        response = self.client.get(reverse("hub:weather"), {"city": "Paris", "lat": "41.85", "lon": "-87.65"})
+        self.assertContains(response, "Paris, France")
+
+    def test_invalid_coordinates_use_the_default_city(self):
+        response = self.client.get(reverse("hub:weather"), {"lat": "north", "lon": "999"})
+        self.assertContains(response, "London, France")
+
+    def test_no_place_at_the_visitors_location(self):
+        response = self.client.get(reverse("hub:weather"), {"lat": "0", "lon": "-30"})
+        self.assertContains(response, "No town found")
+
+    def test_asks_for_location_only_when_no_city_is_chosen(self):
+        self.assertContains(self.client.get(reverse("hub:weather")), "getCurrentPosition")
+        response = self.client.get(reverse("hub:weather"), {"city": "Paris"})
+        self.assertNotContains(response, "getCurrentPosition")
 
     def test_unknown_city(self):
         response = self.client.get(reverse("hub:weather"), {"city": "Nowhere"})
