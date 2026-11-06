@@ -67,15 +67,16 @@ INSTALLED_APPS = [
     'axes',
 ]
 
-# Too many wrong passwords for one username locks that username for an hour.
-# It counts by username because every visitor reaches the site through the same proxy.
+# Too many wrong passwords for one username from one address locks that pair for an hour.
+# It counts the pair because every visitor may reach the site through the same proxy, and
+# locking an address alone would lock them all out.
 AUTHENTICATION_BACKENDS = [
     'axes.backends.AxesStandaloneBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
 AXES_FAILURE_LIMIT = 5
 AXES_COOLOFF_TIME = 1  # hours
-AXES_LOCKOUT_PARAMETERS = ["username","ip_address"]
+AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
 AXES_RESET_ON_SUCCESS = True
 
 MIDDLEWARE = [
@@ -186,7 +187,6 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-
 
 
 # Email

@@ -86,7 +86,7 @@ The login renews itself. To disconnect, delete the Spotify account entry in the 
 
 Before the site leaves your private network, set these in `.env`: `DJANGO_DEBUG=0`, a long random `DJANGO_SECRET_KEY`, and `DJANGO_SECURE_COOKIES=1`, which also means logging in only through an HTTPS address. Add the public address to `DJANGO_ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS`.
 
-Five wrong passwords lock a username for an hour. To unlock sooner: `docker compose exec web python manage.py axes_reset`.
+Five wrong passwords lock a username from that address for an hour. To unlock sooner: `docker compose exec web python manage.py axes_reset`.
 
 ## Admin
 
