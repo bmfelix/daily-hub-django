@@ -14,6 +14,7 @@ from django.utils import timezone
 from . import spotify
 from .models import Artist, ArtistName, Note, Play, Profile, Project, Song, SpotifyAccount, Task
 from .modules.about import AboutModule
+from .modules.brat import BratModule
 from .modules.concerts import ConcertsModule, TicketmasterClient
 from .modules.radio import RadioModule
 from .music import MusicClient, SongLibrary, album_key, best_match, same_artist
@@ -986,6 +987,18 @@ class AboutTests(TestCase):
     def test_owner_is_told_when_the_bio_is_empty(self):
         self.client.force_login(staff_user())
         self.assertContains(self.about(), "Add it in the admin")
+
+
+class BratPageTests(TestCase):
+    def test_describes_the_add_on_and_links_its_code(self):
+        response = self.client.get(reverse("hub:brat"))
+        for text in ("Rotation Assistant", "Warcraft Logs", "Learn from Blizzard", "https://github.com/bmfelix/BRAT"):
+            self.assertContains(response, text)
+
+    def test_in_the_menu_not_on_the_homepage(self):
+        response = self.client.get(reverse("hub:todo"))
+        self.assertContains(response, f'href="{reverse("hub:brat")}"')
+        self.assertFalse(BratModule.on_home)
 
 
 class BuiltPageTests(TestCase):
