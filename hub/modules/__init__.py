@@ -2,6 +2,7 @@ from django.conf import settings
 
 from .about import AboutModule
 from .agenda import AgendaModule
+from .brat import BratModule
 from .built import BuiltModule
 from .charts import ChartsModule
 from .concerts import ConcertsModule
@@ -23,6 +24,7 @@ MODULES = [
     ChartsModule,
     ConcertsModule,
     ListeningModule,
+    BratModule,
     AboutModule,
     BuiltModule,
 ]

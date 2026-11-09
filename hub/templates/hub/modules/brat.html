@@ -1,0 +1,86 @@
+{% extends "hub/base.html" %}
+
+{% block title %}{{ module.title }}{% endblock %}
+
+{% block content %}
+  <p class="kicker">Side project · World of Warcraft</p>
+  <h1>{{ module.title }}</h1>
+
+  <p class="about-headline">Brad's Rotation Assistant Technology is a World of Warcraft add-on. In a fight, it shows the spell to press now and the ones coming next, based on what the best players do.</p>
+
+  <section class="artist-section about-section">
+    <h2>On screen</h2>
+    <ul class="project-list">
+      <li class="panel"><h3>Now</h3><p>The big icon is the spell to press right now, with its key binding on it. It comes from Blizzard's own rotation assistant.</p></li>
+      <li class="panel"><h3>Next and then</h3><p>Smaller icons show the spells after it, so your hands are ready before the moment comes.</p></li>
+      <li class="panel"><h3>Soon</h3><p>A heads-up with a countdown, a few seconds before a stronger spell is ready again.</p></li>
+      <li class="panel"><h3>Ranks</h3><p>For spells you charge up, the icon shows how far to charge, such as "R2", based on how many enemies there are.</p></li>
+    </ul>
+  </section>
+
+  <section class="artist-section about-section">
+    <h2>Where the advice comes from</h2>
+    <div class="table-scroll">
+      <table class="compare">
+        <thead><tr><th scope="col"></th><th scope="col">Warcraft Logs</th><th scope="col">Learn from Blizzard</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">What it uses</th><td>What the top 100 or so players cast, boss by boss and dungeon by dungeon</td><td>What Blizzard's assistant picked during your own fights</td></tr>
+          <tr><th scope="row">Where it lives</th><td>Shipped inside the add-on and refreshed with each update</td><td>Recorded on your computer as you play</td></tr>
+          <tr><th scope="row">Best for</th><td>Playing the way top players do (the default)</td><td>A rotation that fits your own talents</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="meta">An A/B mode switches source every fight, so the damage from each can be compared.</p>
+  </section>
+
+  <section class="artist-section about-section">
+    <h2>How it works</h2>
+    <ul class="project-list">
+      <li class="panel"><h3>Knows where you are</h3><p>Each raid boss and Mythic+ dungeon gets its own rotation, with a general raid or dungeon rotation to fall back on. Training dummies count too.</p></li>
+      <li class="panel"><h3>Counts the enemies</h3><p>Every rotation is split by how many enemies are nearby, from one to eight or more, counted from their nameplates.</p></li>
+      <li class="panel"><h3>Works around hidden data</h3><p>Since the Midnight expansion, the game hides cooldowns from add-ons during combat. BRAT times them itself from your casts and learns how much each spell shortens another.</p></li>
+      <li class="panel"><h3>Watches glowing buttons</h3><p>When a proc lights up a spell, BRAT learns how often it should come next, and moves it up when it should.</p></li>
+      <li class="panel"><h3>Three layers</h3><p>Recorded fights become averages, and averages become the rotation it serves. Both sources go through the same engine.</p></li>
+      <li class="panel"><h3>Checks its own work</h3><p>Every fight is recorded. BRAT scores its guesses against Blizzard and against top players, and calls a spec ready once it matches Blizzard 90% of the time.</p></li>
+    </ul>
+  </section>
+
+  <section class="artist-section about-section">
+    <h2>Supported specs</h2>
+    <div class="table-scroll">
+      <table class="compare">
+        <thead><tr><th scope="col">Spec</th><th scope="col">Class</th><th scope="col">Status (patch 12.1.5)</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Shadow</th><td>Priest</td><td>From guides, not yet confirmed in game</td></tr>
+          <tr><th scope="row">Discipline</th><td>Priest</td><td>Damage spells only. From guides, not yet confirmed in game</td></tr>
+          <tr><th scope="row">Holy</th><td>Priest</td><td>Damage spells only. Confirmed in game</td></tr>
+          <tr><th scope="row">Devastation</th><td>Evoker</td><td>From guides and Warcraft Logs, not yet confirmed in game</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="artist-section about-section">
+    <h2>Commands</h2>
+    <div class="table-scroll">
+      <table class="compare">
+        <tbody>
+          <tr><th scope="row">/brat</th><td>Opens the settings, where every option is explained</td></tr>
+          <tr><th scope="row">/brat check</th><td>Checks everything BRAT depends on, with a fix for anything wrong</td></tr>
+          <tr><th scope="row">/brat why</th><td>Explains the current suggestion</td></tr>
+          <tr><th scope="row">/brat analyze</th><td>Scores your recorded fights and shows the results</td></tr>
+          <tr><th scope="row">/brat source</th><td>Switches between Warcraft Logs and Learn from Blizzard</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="artist-section about-section">
+    <h2>How it's built</h2>
+    <ul class="project-list">
+      <li class="panel"><h3>Lua</h3><p>The add-on is written in Lua, the language World of Warcraft add-ons use. Test harnesses run its logic outside the game with LuaJIT.</p></li>
+      <li class="panel"><h3>PowerShell tools</h3><p>A data manager downloads top players' fights from Warcraft Logs and writes them into the add-on. Another tool studies your recorded fights on your computer.</p></li>
+      <li class="panel"><h3>The code</h3><p>BRAT is open source.</p><p class="project-links"><a href="https://github.com/bmfelix/BRAT" rel="noopener" target="_blank">Code</a></p></li>
+    </ul>
+  </section>
+{% endblock %}

@@ -17,6 +17,7 @@ This is one of three builds of the same app (Django, Next.js, Laravel), so the f
 | Charts   | `ChartsModule`   | Postgres (`Play` model) |
 | Agenda   | `AgendaModule`   | Google or Apple calendar links |
 | Listening | `ListeningModule` | [Spotify Web API](https://developer.spotify.com/documentation/web-api) (your own app) |
+| BRAT     | `BratModule`     | Written by hand: Brad's World of Warcraft rotation add-on ([code](https://github.com/bmfelix/BRAT)) |
 | About    | `AboutModule`    | `Profile` and `Project` models, [GitHub API](https://docs.github.com/rest) (no key) |
 | How it's built | `BuiltModule` | Written by hand, linked from the footer |
 
