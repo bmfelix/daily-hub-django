@@ -25,6 +25,21 @@ WEATHER_CODES = {
 }
 
 
+def sky(code):
+    """The kind of sky a weather code means, for the page's look and the day icons."""
+    if code in (0, 1):
+        return "clear"
+    if code in (45, 48):
+        return "fog"
+    if 71 <= code <= 77 or code in (85, 86):
+        return "snow"
+    if code >= 95:
+        return "storm"
+    if 51 <= code <= 67 or 80 <= code <= 82:
+        return "rain"
+    return "cloudy"
+
+
 class OpenMeteoClient:
     """Talks to Open-Meteo, a free weather API that needs no key, and Nominatim for place names."""
 
@@ -130,6 +145,7 @@ class WeatherModule(HubModule):
                 "date": date,
                 "weekday": datetime.strptime(date, "%Y-%m-%d").strftime("%a"),
                 "label": WEATHER_CODES.get(code, "Unknown"),
+                "sky": sky(code),
                 "high": high,
                 "low": low,
                 # Where this day's range sits on a bar covering the whole week.
@@ -150,6 +166,7 @@ class WeatherModule(HubModule):
                 "feels_like": current["apparent_temperature"],
                 "wind": current["wind_speed_10m"],
                 "label": WEATHER_CODES.get(current["weather_code"], "Unknown"),
+                "sky": sky(current["weather_code"]),
             },
             "days": days,
         }

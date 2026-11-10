@@ -3,6 +3,12 @@
 {% block title %}{{ module.title }}{% endblock %}
 
 {% block content %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'hub/phones.css' %}">
+<div class="theme-phones">
+  <div class="phones-art" aria-hidden="true">
+    <svg viewBox="0 0 200 170"><path class="phones-band" d="M44 104V86a56 56 0 0 1 112 0v18"/><rect class="phones-cup" x="28" y="96" width="32" height="56" rx="13"/><rect class="phones-cup" x="140" y="96" width="32" height="56" rx="13"/><path class="phones-wave" d="M16 108q-9 16 0 32"/><path class="phones-wave far" d="M5 98q-16 26 0 52"/><path class="phones-wave" d="M184 108q9 16 0 32"/><path class="phones-wave far" d="M195 98q16 26 0 52"/></svg>
+  </div>
   <p class="kicker">On heavy rotation</p>
   <h1>{{ module.title }}</h1>
 
@@ -47,4 +53,5 @@
   {% endif %}
 
   <p class="source">Data: Spotify</p>
+</div>
 {% endblock %}
