@@ -1,3 +1,4 @@
+import re
 import time
 import xml.etree.ElementTree as ET
 from datetime import datetime
@@ -31,6 +32,14 @@ class Station:
     name = ""
     frequency = ""
     stream_url = ""  # the station's live audio
+
+    @property
+    def dial(self):
+        """Where the station sits on an 88-108 FM dial, from 0 to 100. Reads the last number in the frequency."""
+        numbers = re.findall(r"\d+(?:\.\d+)?", self.frequency)
+        if not numbers:
+            return 50
+        return round(min(max((float(numbers[-1]) - 88) / 20 * 100, 0), 100), 1)
 
     def tracks(self, limit=10):
         """Return recent songs, newest first. Each subclass calls its own API here."""

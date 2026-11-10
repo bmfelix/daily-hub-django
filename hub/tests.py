@@ -9,9 +9,9 @@ from django.urls import reverse
 
 from .models import Note, Task
 from .modules import MODULES
-from .modules.news import NewsModule
+from .modules.news import NewsModule, parse_feed
 from .modules.radio import IHeartStation, RadioModule, Station, TritonStation
-from .modules.weather import WeatherModule
+from .modules.weather import WeatherModule, sky
 
 
 def editor():
@@ -54,11 +54,17 @@ class FakeWeatherClient:
 
 
 class FakeNewsClient:
-    def front_page(self, limit=20):
+    def top_stories(self, limit=20):
         return [
-            {"objectID": "1", "title": "With link", "url": "https://example.com", "points": 10, "num_comments": 3, "author": "ann"},
-            {"objectID": "2", "title": "Ask HN", "url": None, "points": 5, "num_comments": None, "author": "bob"},
+            {"title": "Big story - BBC", "link": "https://example.com/big", "source": "BBC", "published": "Tue, 10 Nov 2026 01:38:49 GMT"},
+            {"title": "No source", "link": "https://example.com/other", "source": "", "published": "not a date"},
         ]
+
+
+NEWS_RSS = b"""<?xml version="1.0"?><rss version="2.0"><channel><title>Top stories</title>
+<item><title>Big story - BBC</title><link>https://news.google.com/a</link><pubDate>Tue, 10 Nov 2026 01:38:49 GMT</pubDate><source url="https://www.bbc.com">BBC</source></item>
+<item><title>Second - NPR</title><link>https://news.google.com/b</link><pubDate>Tue, 10 Nov 2026 01:00:00 GMT</pubDate><source url="https://www.npr.org">NPR</source></item>
+</channel></rss>"""
 
 
 class BrokenClient:
@@ -94,6 +100,12 @@ class WeatherTests(TestCase):
         self.assertContains(response, "12 km/h")
         self.assertContains(response, "Overcast")
         self.assertContains(response, "Light rain")
+
+    def test_the_page_and_each_day_follow_the_sky(self):
+        response = self.client.get(reverse("hub:weather"), {"city": "Paris"})
+        self.assertContains(response, 'class="theme-weather sky-cloudy"')  # overcast now
+        self.assertEqual([day["sky"] for day in response.context["days"]], ["clear", "rain"])
+        self.assertEqual([sky(code) for code in (0, 3, 45, 63, 75, 95)], ["clear", "cloudy", "fog", "rain", "snow", "storm"])
 
     def test_uses_fahrenheit_and_mph_in_the_united_states(self):
         response = self.client.get(reverse("hub:weather"), {"city": "Chicago"})
@@ -137,16 +149,24 @@ class WeatherTests(TestCase):
 
 @mock.patch.object(NewsModule, "client_class", FakeNewsClient)
 class NewsTests(TestCase):
-    def test_lists_stories(self):
+    def test_lists_stories_with_the_source_on_its_own_line(self):
         response = self.client.get(reverse("hub:news"))
-        self.assertContains(response, "With link")
-        self.assertContains(response, 'href="https://example.com"')
-
-    def test_story_without_url_links_to_discussion(self):
-        response = self.client.get(reverse("hub:news"))
+        self.assertContains(response, 'href="https://example.com/big"')
+        self.assertContains(response, ">Big story</a>")
+        self.assertContains(response, "BBC")
         stories = response.context["stories"]
-        self.assertEqual(stories[1]["url"], "https://news.ycombinator.com/item?id=2")
-        self.assertEqual(stories[1]["comments"], 0)
+        self.assertEqual(stories[0]["published"].year, 2026)
+
+    def test_a_story_without_a_source_or_date_still_shows(self):
+        stories = self.client.get(reverse("hub:news")).context["stories"]
+        self.assertEqual(stories[1]["title"], "No source")
+        self.assertIsNone(stories[1]["published"])
+
+    def test_reads_the_google_news_feed(self):
+        items = parse_feed(NEWS_RSS)
+        self.assertEqual([item["source"] for item in items], ["BBC", "NPR"])
+        self.assertEqual(items[0]["link"], "https://news.google.com/a")
+        self.assertEqual(items[0]["title"], "Big story - BBC")
 
     def test_service_down(self):
         with mock.patch.object(NewsModule, "client_class", BrokenClient):
@@ -214,6 +234,11 @@ def song(title, artist, end):
 
 
 class StationTests(TestCase):
+    def test_dial_places_the_station_on_the_fm_band(self):
+        self.assertEqual(IHeartStation("WEBN", "102.7 FM", 1701).dial, 73.5)
+        self.assertEqual(TritonStation("WKRQ", "Q102 · 101.9 FM", "WKRQFM").dial, 69.5)
+        self.assertEqual(FakeStation("X").dial, 0)  # "1 FM" is below the band
+
     def test_iheart_maps_history_and_uses_https_images(self):
         data = {"data": [{"title": "Self Esteem", "artist": "The Offspring", "startTime": 100, "endTime": 9999999999, "imagePath": "http://image.iheart.com/a.jpg"}]}
         with mock.patch("hub.modules.radio.requests.get", return_value=FakeResponse(data)):

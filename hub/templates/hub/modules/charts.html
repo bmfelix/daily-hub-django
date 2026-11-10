@@ -3,6 +3,8 @@
 {% block title %}{{ module.title }}{% endblock %}
 
 {% block content %}
+<div class="theme-radio">
+  {% include "hub/airwaves.html" %}
   <p class="kicker">The weekly countdown</p>
   <h1>{{ module.title }}</h1>
 
@@ -56,4 +58,5 @@
   {% endfor %}
 
   <p class="source">Counted by Daily Hub from each station's song feed, from the day tracking began.</p>
+</div>
 {% endblock %}

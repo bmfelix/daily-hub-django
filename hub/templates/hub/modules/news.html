@@ -1,23 +1,33 @@
 {% extends "hub/base.html" %}
+{% load static %}
 
 {% block title %}{{ module.title }}{% endblock %}
 
 {% block content %}
-  <p class="kicker">Today's headliners</p>
-  <h1>{{ module.title }}</h1>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=UnifrakturMaguntia&display=swap">
+<link rel="stylesheet" href="{% static 'hub/news.css' %}">
+<div class="theme-news">
+  <article class="paper">
+    <header class="paper-masthead">
+      <p class="paper-ears"><span>Cincinnati edition</span><span>Top stories</span></p>
+      <h1 class="paper-title">The Daily Hub</h1>
+      <p class="paper-dateline"><span>{% now "l, F j, Y" %}</span><span>{{ module.title }}</span><span>Free</span></p>
+    </header>
 
-  {% if error %}
-    <p class="notice">{{ error }}</p>
-  {% else %}
-    <ol class="headlines">
-      {% for story in stories %}
-        <li>
-          <a class="headline" href="{{ story.url }}" rel="noopener" target="_blank">{{ story.title }}</a>
-          <span class="meta">{{ story.points }} points · by {{ story.author }} · <a href="{{ story.discussion }}" rel="noopener" target="_blank">{{ story.comments }} comments</a></span>
-        </li>
-      {% endfor %}
-    </ol>
-  {% endif %}
+    {% if error %}
+      <p class="notice">{{ error }}</p>
+    {% else %}
+      <ol class="paper-stories">
+        {% for story in stories %}
+          <li class="paper-story{% if forloop.first %} paper-lead{% endif %}">
+            <a class="paper-headline" href="{{ story.url }}" rel="noopener" target="_blank">{{ story.title }}</a>
+            <span class="paper-byline">{{ story.source }}{% if story.published %}{% if story.source %} · {% endif %}<time datetime="{{ story.published|date:'c' }}">{{ story.published|date:"M j, g:i A" }}</time>{% endif %}</span>
+          </li>
+        {% endfor %}
+      </ol>
+    {% endif %}
 
-  <p class="source">Data: Hacker News</p>
+    <p class="source">Data: Google News</p>
+  </article>
+</div>
 {% endblock %}

@@ -454,8 +454,8 @@ class HomeCardTests(TestCase):
 
     def test_a_module_can_return_just_its_card(self):
         with mock.patch("hub.modules.news.NewsModule.client_class") as client:
-            client.return_value.front_page.return_value = [
-                {"objectID": "1", "title": "Big story", "url": "https://example.com", "author": "ann"},
+            client.return_value.top_stories.return_value = [
+                {"title": "Big story - BBC", "link": "https://example.com", "source": "BBC", "published": ""},
             ]
             response = self.client.get(reverse("hub:news"), {"card": 1})
         self.assertContains(response, "Big story")
